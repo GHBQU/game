@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>游戏厅 · 小宇.GAY</title>
+<meta name="description" content="两个纯静态网页游戏：IP, PLEASE（像素剧情）与 暗夜幸存者（生存射击）。打开就能玩，不登录、不下载、不追踪。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="游戏厅 · 小宇.GAY">
+<meta property="og:description" content="两个纯静态网页游戏，打开就能玩。">
+<meta property="og:url" content="https://xn--29s3l.xn--0iv.gay/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0b0b'/%3E%3Crect x='6' y='6' width='20' height='20' fill='%23e2001a'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --ink:#0b0b0b;
+    --paper:#ffffff;
+    --red:#e2001a;
+    --gray:#6f6f6f;
+    --gray-2:#a3a3a3;
+    --rule:#dcdcdc;
+    --wash:#f4f4f4;
+    --font:"Helvetica Neue",Helvetica,"Inter",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --pad:clamp(18px,3.2vw,44px);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font);
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  a{color:inherit;text-decoration:none}
+  ::selection{background:var(--red);color:#fff}
+
+  .wrap{max-width:1500px;margin:0 auto;padding:0 var(--pad)}
+
+  /* ---------- 报头 ---------- */
+  .masthead{
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:baseline;
+    gap:16px;
+    padding:16px 0 13px;
+    border-bottom:2px solid var(--ink);
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    font-weight:600;
+  }
+  .masthead .mark{letter-spacing:.1em}
+  .masthead .mark b{font-weight:700}
+  .masthead .mid{color:var(--gray);letter-spacing:.2em;font-weight:500}
+  .masthead .right{text-align:right;color:var(--gray);letter-spacing:.16em;font-weight:500}
+  @media (max-width:640px){
+    .masthead{grid-template-columns:1fr 1fr;gap:6px}
+    .masthead .mid{display:none}
+  }
+
+  /* ---------- 首屏 ---------- */
+  .hero{
+    display:grid;
+    grid-template-columns:minmax(0,7fr) minmax(0,5fr);
+    gap:clamp(24px,4vw,72px);
+    padding:clamp(34px,6vw,78px) 0 clamp(30px,4.5vw,56px);
+    align-items:end;
+  }
+  .hero h1{
+    font-size:clamp(76px,15.5vw,208px);
+    line-height:.82;
+    letter-spacing:-.045em;
+    font-weight:700;
+    margin-left:-.045em;
+  }
+  .hero .sub{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    margin-top:clamp(12px,1.6vw,22px);
+    padding-top:10px;
+    border-top:1px solid var(--rule);
+  }
+  .hero .sub .en{
+    font-size:clamp(13px,1.5vw,17px);
+    letter-spacing:.42em;
+    text-transform:uppercase;
+    font-weight:700;
+    color:var(--red);
+  }
+  .hero .sub .cn{
+    font-size:12px;
+    letter-spacing:.14em;
+    color:var(--gray-2);
+    font-weight:500;
+  }
+
+  .lede{
+    font-size:clamp(15px,1.35vw,17.5px);
+    line-height:1.62;
+    max-width:34ch;
+    text-wrap:pretty;
+  }
+  .lede b{font-weight:700;box-shadow:inset 0 -.42em 0 rgba(226,0,26,.16)}
+
+  .specs{
+    margin-top:clamp(22px,2.6vw,34px);
+    border-top:1px solid var(--ink);
+  }
+  .specs div{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:12px;
+    padding:7px 0;
+    border-bottom:1px solid var(--rule);
+    font-size:12px;
+  }
+  .specs dt{color:var(--gray);letter-spacing:.1em}
+  .specs dd{
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:.02em;
+  }
+
+  @media (max-width:820px){
+    .hero{grid-template-columns:1fr;align-items:start;gap:26px}
+    .lede{max-width:none}
+    .specs{max-width:420px}
+  }
+
+  /* ---------- 索引栏 ---------- */
+  .index-bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:16px;
+    padding:10px 0;
+    border-top:2px solid var(--ink);
+    border-bottom:1px solid var(--rule);
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    font-weight:600;
+  }
+  .index-bar .count{color:var(--red)}
+  .index-bar .hint{color:var(--gray-2);letter-spacing:.14em;font-weight:500;text-transform:none;font-size:11.5px}
+  @media (max-width:560px){ .index-bar .hint{display:none} }
+
+  /* ---------- 游戏条目 ---------- */
+  .entry{display:block;border-bottom:1px solid var(--rule);position:relative}
+  .entry > .row{
+    display:grid;
+    grid-template-columns:54px minmax(0,220px) minmax(0,1fr) 188px;
+    gap:clamp(16px,2.4vw,38px);
+    padding:clamp(20px,2.6vw,32px) 0;
+    align-items:start;
+    transition:background .16s ease;
+  }
+  .entry::before{
+    content:"";
+    position:absolute;
+    left:calc(-1 * var(--pad));
+    top:0;bottom:0;
+    width:4px;
+    background:var(--red);
+    transform:scaleY(0);
+    transform-origin:top;
+    transition:transform .22s cubic-bezier(.2,.7,.3,1);
+  }
+  .entry:hover::before,.entry:focus-within::before{transform:scaleY(1)}
+  .entry:hover .row,.entry:focus-within .row{background:var(--wash)}
+  .entry:hover .num,.entry:focus-within .num{color:var(--red)}
+  .entry:hover .go,.entry:focus-within .go{background:var(--red);border-color:var(--red);color:#fff}
+  .entry:hover .go svg,.entry:focus-within .go svg{transform:translateX(3px)}
+
+  .num{
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.06em;
+    font-variant-numeric:tabular-nums;
+    color:var(--gray-2);
+    padding-top:4px;
+    transition:color .16s;
+  }
+
+  /* 几何封面 */
+  .art{
+    position:relative;
+    aspect-ratio:16/10;
+    width:100%;
+    overflow:hidden;
+  }
+  .art-ip{background:var(--red)}
+  .art-ip .lbl{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    color:#fff;
+  }
+  .art-ip .big{
+    font-size:clamp(34px,3.6vw,46px);
+    font-weight:700;
+    letter-spacing:-.03em;
+    line-height:1;
+  }
+  .art-ip .small{
+    font-size:8.5px;
+    letter-spacing:.44em;
+    text-transform:uppercase;
+    margin-top:7px;
+    opacity:.85;
+  }
+  .art-ip .frame{
+    position:absolute;
+    inset:9px;
+    border:1px solid rgba(255,255,255,.42);
+  }
+  .art-ip .stamp{
+    position:absolute;
+    right:-26px;bottom:-30px;
+    width:96px;height:96px;
+    border:1.5px solid rgba(255,255,255,.3);
+    border-radius:50%;
+  }
+
+  .art-night{background:#0a0d18}
+  .art-night::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      repeating-radial-gradient(circle at 50% 52%,
+        transparent 0 9px,
+        rgba(255,255,255,.16) 9px 10px);
+  }
+  .art-night::after{
+    content:"";
+    position:absolute;
+    left:50%;top:52%;
+    width:9px;height:9px;
+    margin:-4.5px 0 0 -4.5px;
+    background:#ff6b7a;
+    border-radius:50%;
+    box-shadow:0 0 0 3px rgba(255,107,122,.22);
+  }
+  .art-night .lbl{
+    position:absolute;
+    left:9px;bottom:7px;
+    font-size:8.5px;
+    letter-spacing:.3em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.55);
+    font-weight:600;
+  }
+
+  .body .title{
+    display:block;
+    font-size:clamp(21px,2.5vw,31px);
+    font-weight:700;
+    letter-spacing:-.018em;
+    line-height:1.12;
+  }
+  .body .title-cn{
+    display:block;
+    font-size:12.5px;
+    letter-spacing:.14em;
+    color:var(--gray);
+    margin-top:5px;
+    font-weight:500;
+  }
+  .body .desc{
+    display:block;
+    margin-top:13px;
+    font-size:13.5px;
+    line-height:1.68;
+    color:#3d3d3d;
+    max-width:46ch;
+    text-wrap:pretty;
+  }
+  .tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+    margin-top:15px;
+  }
+  .tags span{
+    font-size:10.5px;
+    letter-spacing:.09em;
+    padding:2.5px 7px;
+    border:1px solid var(--rule);
+    color:var(--gray);
+    font-weight:600;
+    text-transform:uppercase;
+  }
+
+  .side{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    padding-top:4px;
+  }
+  .side .kv{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    font-size:11.5px;
+    padding-bottom:7px;
+    border-bottom:1px solid var(--rule);
+  }
+  .side .kv .k{color:var(--gray-2);letter-spacing:.08em}
+  .side .kv .v{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+  .go{
+    margin-top:6px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:10px 13px;
+    border:1.5px solid var(--ink);
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.1em;
+    transition:background .16s,border-color .16s,color .16s;
+  }
+  .go svg{transition:transform .18s ease;flex:none}
+
+  @media (max-width:1000px){
+    .entry > .row{grid-template-columns:40px minmax(0,180px) minmax(0,1fr);}
+    .side{grid-column:1 / -1;flex-direction:row;flex-wrap:wrap;align-items:center;padding-top:2px}
+    .side .kv{border:0;padding:0;gap:6px;flex:none}
+    .side .kv .k{display:none}
+    .side .kv .v{font-weight:500;color:var(--gray);font-size:11.5px}
+    .go{margin-top:0;margin-left:auto;flex:none;padding:8px 12px}
+  }
+  @media (max-width:680px){
+    .entry > .row{grid-template-columns:32px minmax(0,1fr);gap:14px}
+    .art{grid-column:2;aspect-ratio:16/7;max-width:100%}
+    .body{grid-column:2}
+    .side{grid-column:2}
+    .go{margin-left:0;width:100%;justify-content:space-between}
+    .side{flex-direction:column;align-items:stretch;gap:8px}
+    .side .kv .k{display:block}
+    .side .kv{border-bottom:1px solid var(--rule);padding-bottom:7px}
+    .side .kv .v{color:var(--ink);font-weight:600}
+  }
+
+  /* ---------- 页脚 ---------- */
+  footer{
+    margin-top:clamp(48px,7vw,96px);
+    border-top:2px solid var(--ink);
+    padding:18px 0 44px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:18px 40px;
+    font-size:11.5px;
+    color:var(--gray);
+  }
+  footer .credits{line-height:1.9;max-width:60ch}
+  footer .credits b{color:var(--ink);font-weight:600}
+  footer .credits a{border-bottom:1px solid var(--rule);transition:border-color .15s,color .15s}
+  footer .credits a:hover{color:var(--red);border-color:var(--red)}
+  footer .sign{text-align:right;line-height:1.9}
+  footer .sign .big{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.12em;
+    color:var(--ink);
+    text-transform:uppercase;
+  }
+  @media (max-width:640px){
+    footer{grid-template-columns:1fr}
+    footer .sign{text-align:left}
+  }
+
+  /* ---------- 无障碍 ---------- */
+  a:focus-visible,button:focus-visible{
+    outline:2px solid var(--red);
+    outline-offset:3px;
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;animation:none !important}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="mark">小宇<b>.GAY</b></div>
+    <div class="mid">游戏目录 / Game Index</div>
+    <div class="right">2026 · No.01</div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>游戏厅</h1>
+      <div class="sub">
+        <span class="en">Arcade</span>
+        <span class="cn">两个游戏，零安装</span>
+      </div>
+    </div>
+
+    <div>
+      <p class="lede">
+        两个纯静态网页游戏，<b>打开就能玩</b>。不登录、不下载、不追踪，所有进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
+      </p>
+      <dl class="specs">
+        <div><dt>收录</dt><dd>02 款</dd></div>
+        <div><dt>体积</dt><dd>896 KB</dd></div>
+        <div><dt>后端</dt><dd>无</dd></div>
+        <div><dt>追踪</dt><dd>无</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <div class="index-bar">
+    <span>目录 <span class="count">01—02</span></span>
+    <span class="hint">点击任意条目开始</span>
+  </div>
+
+  <main>
+
+    <a class="entry" href="games/ip-please/">
+      <div class="row">
+        <div class="num">01</div>
+
+        <div class="art art-ip" aria-hidden="true">
+          <span class="frame"></span>
+          <span class="stamp"></span>
+          <span class="lbl">
+            <span class="big">IP</span>
+            <span class="small">Please</span>
+          </span>
+        </div>
+
+        <div class="body">
+          <span class="title">IP, PLEASE</span>
+          <span class="title-cn">请出示你的 IP</span>
+          <span class="desc">
+            Papers, Please 画风的像素剧情游戏。你抽中十月劳动彩票，被分配到东八区检查站当入境审查员，工作只有一项：揪出假装是美国人的旅客。六天剧情，两个结局，每天自动存档。
+          </span>
+          <span class="tags">
+            <span>剧情</span><span>模拟</span><span>像素</span><span>中 / EN</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">时长</span><span class="v">≈ 30 分钟</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">拖拽证件</span></div>
+          <div class="kv"><span class="k">作者</span><span class="v">ctnyanya</span></div>
+          <div class="go">
+            <span>开始审查</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <a class="entry" href="games/night-survivors/">
+      <div class="row">
+        <div class="num">02</div>
+
+        <div class="art art-night" aria-hidden="true">
+          <span class="lbl">Night Survivors</span>
+        </div>
+
+        <div class="body">
+          <span class="title">暗夜幸存者</span>
+          <span class="title-cn">NIGHT SURVIVORS</span>
+          <span class="desc">
+            顶视角生存射击。只有一条命，敌人从四面涌来，每升一级从三个随机升级里挑一个。活得越久，屏幕越挤。最高生存时间、击杀数和等级都存在本地。
+          </span>
+          <span class="tags">
+            <span>生存</span><span>Roguelite</span><span>键盘 / 触屏</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">节奏</span><span class="v">单局 3—10 分钟</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">WASD / 摇杆</span></div>
+          <div class="kv"><span class="k">作者</span><span class="v">小宇</span></div>
+          <div class="go">
+            <span>进入黑夜</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
+  </main>
+
+  <footer>
+    <div class="credits">
+      <b>IP, PLEASE</b> 由 <a href="https://github.com/ip-please/ip-please.github.io" target="_blank" rel="noopener">ctnyanya</a> 开发，MIT 许可，此处为静态镜像。<br>
+      <b>暗夜幸存者</b> 由 小宇 开发。<br>
+      两个游戏均不加载任何外部资源，断网也能玩。
+    </div>
+    <div class="sign">
+      <span class="big">小宇.GAY</span>
+      2026 · 保留所有权利
+    </div>
+  </footer>
+
+</div>
+
+</body>
+</html>
