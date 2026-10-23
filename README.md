@@ -46,7 +46,7 @@ python3 -m http.server 8899
 | # | 游戏 | 类型 | 来源 | 许可 |
 |---|------|------|------|------|
 | 01 | IP, PLEASE · 请出示你的 IP | 剧情 / 模拟 / 像素 | [ctnyanya](https://github.com/ip-please/ip-please.github.io) | MIT |
-| 02 | 暗夜幸存者 · Night Survivors | 生存 / Roguelite | 小宇 | — |
+| 02 | 暗夜幸存者 · Night Survivors | 生存 / Roguelite | wyc & DeepSeek | — |
 
 `IP, PLEASE` 为原仓库的静态镜像，仅保留运行时所需文件（去掉了 `media/`、`tools/` 与文档），并在页面左上角加了一个返回游戏厅的入口。原始版权与 MIT 许可见 `games/ip-please/LICENSE`。
 
