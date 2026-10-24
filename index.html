@@ -17,7 +17,7 @@
     try{
       var q = new URLSearchParams(location.search).get('style');
       var s = q || localStorage.getItem('arcade-style');
-      if(['clean','portal','pixel','glitch'].indexOf(s) >= 0){
+      if(['clean','portal','pixel','glitch','glass'].indexOf(s) >= 0){
         document.documentElement.setAttribute('data-style', s);
       }
     }catch(e){}
@@ -745,12 +745,244 @@ html[data-style="glitch"] footer .sign .big::after{content:" // SIGNAL LOST";col
 }
 
 /* ==========================================================================
-   5. 非门户主题隐藏千禧年专属装饰
+   5. 液态玻璃 · Liquid Glass
+   透明度 / 立体感 / 动态反馈 / 液态材质
+   ========================================================================== */
+html[data-style="glass"]{
+  --gx-text:#15151a;
+  --gx-dim:#5f6068;
+  --gx-faint:#8b8d96;
+  --gx-accent:#0a84ff;
+  --gx-radius:28px;
+  --gx-radius-sm:18px;
+  --gx-line:rgba(255,255,255,.68);
+  --gx-fill:rgba(255,255,255,.28);
+  --gx-fill-2:rgba(255,255,255,.42);
+  --gx-shadow:0 18px 46px rgba(24,34,66,.10),0 2px 8px rgba(24,34,66,.05);
+  --gx-shadow-hi:0 30px 72px rgba(24,34,66,.17),0 4px 14px rgba(24,34,66,.07);
+  --spring:cubic-bezier(.34,1.4,.5,1);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif;
+}
+html[data-style="glass"] body{
+  position:relative;min-height:100vh;padding:22px 0 90px;
+  background:linear-gradient(165deg,#d9e6fb 0%,#f1e4f8 44%,#dff5ec 100%);
+  color:var(--gx-text);font-family:var(--font);
+  font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased;
+}
+html[data-style="glass"] ::selection{background:rgba(10,132,255,.24)}
+
+/* 液态材质：缓慢流动的彩色光斑 */
+html[data-style="glass"] body::before{
+  content:"";position:fixed;inset:-30% -25%;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(38% 34% at 16% 22%,rgba(96,152,255,.95),transparent 62%),
+    radial-gradient(34% 32% at 82% 14%,rgba(255,124,190,.88),transparent 64%),
+    radial-gradient(36% 34% at 76% 86%,rgba(64,222,168,.82),transparent 62%),
+    radial-gradient(32% 30% at 22% 78%,rgba(160,128,255,.90),transparent 64%);
+  filter:blur(44px) saturate(150%);
+  animation:gxAurora 30s ease-in-out infinite alternate;
+}
+@keyframes gxAurora{
+  0%{transform:translate3d(-2%,-1%,0) rotate(0deg) scale(1)}
+  50%{transform:translate3d(2%,2%,0) rotate(4deg) scale(1.06)}
+  100%{transform:translate3d(-1%,3%,0) rotate(-3deg) scale(1.02)}
+}
+html[data-style="glass"] .wrap{
+  position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 22px;
+}
+
+/* 玻璃材质：透明度 + 立体感 */
+html[data-style="glass"] .masthead,
+html[data-style="glass"] .hero-card,
+html[data-style="glass"] .entry,
+html[data-style="glass"] footer{
+  background:var(--gx-fill);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);
+  backdrop-filter:blur(26px) saturate(180%);
+  border:1px solid var(--gx-line);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    inset 0 -1px 0 rgba(255,255,255,.30),
+    var(--gx-shadow);
+}
+
+/* 报头 */
+html[data-style="glass"] .masthead{
+  display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:12px 22px;border-radius:999px;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:var(--gx-dim);
+}
+html[data-style="glass"] .masthead .mark{color:var(--gx-text);letter-spacing:.06em;font-size:13px;text-transform:none}
+html[data-style="glass"] .masthead .mark b{color:var(--gx-accent)}
+html[data-style="glass"] .masthead .mid{letter-spacing:.16em}
+html[data-style="glass"] .masthead .right{letter-spacing:.14em}
+
+/* 首屏 */
+html[data-style="glass"] .hero{
+  display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+  gap:clamp(24px,4vw,56px);padding:clamp(40px,7vw,86px) 0 clamp(24px,3.6vw,40px);
+  align-items:end;
+}
+html[data-style="glass"] .hero h1{
+  font-size:clamp(64px,12vw,168px);line-height:.86;letter-spacing:-.045em;font-weight:700;
+  margin-left:-.04em;
+  background:linear-gradient(180deg,#101014 0%,#33353f 62%,#5c5f6c 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+html[data-style="glass"] .hero .sub{
+  display:flex;align-items:baseline;gap:12px;margin-top:18px;padding-top:10px;
+  border-top:1px solid rgba(21,21,26,.12);
+}
+html[data-style="glass"] .hero .sub .en{font-size:12px;letter-spacing:.42em;text-transform:uppercase;font-weight:700;color:var(--gx-accent)}
+html[data-style="glass"] .hero .sub .cn{font-size:12px;letter-spacing:.1em;color:var(--gx-dim)}
+html[data-style="glass"] .hero-card{border-radius:var(--gx-radius);padding:22px 24px}
+html[data-style="glass"] .lede{font-size:14.5px;line-height:1.72;color:#33353d;max-width:none}
+html[data-style="glass"] .lede b{font-weight:700;color:#0a0a0f;box-shadow:inset 0 -.5em 0 rgba(10,132,255,.16)}
+html[data-style="glass"] .specs{margin-top:16px;border-top:1px solid rgba(21,21,26,.10)}
+html[data-style="glass"] .specs div{
+  display:flex;justify-content:space-between;gap:10px;padding:7px 0;
+  border-bottom:1px solid rgba(21,21,26,.07);font-size:12px;
+}
+html[data-style="glass"] .specs div:last-child{border-bottom:0}
+html[data-style="glass"] .specs dt{color:var(--gx-faint);letter-spacing:.06em}
+html[data-style="glass"] .specs dd{font-weight:600;font-variant-numeric:tabular-nums}
+
+/* 索引栏 */
+html[data-style="glass"] .bar{
+  display:flex;justify-content:space-between;align-items:center;gap:14px;
+  margin:8px 4px 18px;padding:0;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;color:var(--gx-faint);
+}
+html[data-style="glass"] .bar .count{color:var(--gx-accent)}
+html[data-style="glass"] .bar .hint{letter-spacing:.06em;text-transform:none;font-weight:400}
+
+/* 条目：动态反馈 */
+html[data-style="glass"] .list{display:grid;gap:16px}
+html[data-style="glass"] .entry{
+  display:block;position:relative;border-radius:var(--gx-radius);overflow:hidden;
+  transition:transform .45s var(--spring),box-shadow .45s ease,background .3s ease;
+  will-change:transform;
+}
+html[data-style="glass"] .entry::before{
+  content:"";position:absolute;left:12%;right:12%;top:0;height:1px;z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent);
+  pointer-events:none;
+}
+html[data-style="glass"] .entry::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(240px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.55),transparent 62%);
+  opacity:0;transition:opacity .35s ease;
+}
+html[data-style="glass"] .entry:hover{
+  transform:translateY(-3px);
+  background:var(--gx-fill-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    inset 0 -1px 0 rgba(255,255,255,.3),
+    var(--gx-shadow-hi);
+}
+html[data-style="glass"] .entry:hover::after{opacity:1}
+html[data-style="glass"] .entry > .row{
+  display:grid;grid-template-columns:50px 208px minmax(0,1fr) 190px;
+  gap:clamp(16px,2.4vw,32px);padding:20px 22px;align-items:start;background:none;
+}
+html[data-style="glass"] .num{
+  font-size:12px;font-weight:700;color:var(--gx-faint);letter-spacing:.1em;
+  padding-top:6px;font-variant-numeric:tabular-nums;
+}
+html[data-style="glass"] .art{
+  border-radius:var(--gx-radius-sm);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 6px 18px rgba(24,34,66,.14);
+}
+html[data-style="glass"] .body .title{
+  display:block;font-size:clamp(20px,2.3vw,28px);font-weight:700;
+  letter-spacing:-.02em;line-height:1.15;
+}
+html[data-style="glass"] .body .title-cn{display:block;font-size:12px;letter-spacing:.1em;color:var(--gx-dim);margin-top:5px}
+html[data-style="glass"] .body .desc{display:block;margin-top:11px;font-size:13px;line-height:1.72;color:#3d3f47;max-width:46ch}
+html[data-style="glass"] .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
+html[data-style="glass"] .tags span{
+  font-size:10.5px;letter-spacing:.05em;padding:3px 9px;border-radius:999px;
+  background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.72);
+  color:#4a4c55;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+}
+html[data-style="glass"] .side{display:flex;flex-direction:column;gap:8px;padding-top:2px}
+html[data-style="glass"] .side .kv{
+  display:flex;justify-content:space-between;gap:8px;font-size:11.5px;
+  padding-bottom:6px;border-bottom:1px solid rgba(21,21,26,.08);
+}
+html[data-style="glass"] .side .kv .k{color:var(--gx-faint);letter-spacing:.04em}
+html[data-style="glass"] .side .kv .v{font-weight:600;text-align:right}
+html[data-style="glass"] .go{
+  margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:9px 15px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.62));
+  border:1px solid rgba(255,255,255,.95);
+  box-shadow:inset 0 1px 0 #fff,0 6px 16px rgba(24,34,66,.12);
+  font-size:12px;font-weight:600;letter-spacing:.03em;color:#1b1d24;
+  transition:transform .35s var(--spring),background .2s,box-shadow .35s;
+}
+html[data-style="glass"] .go svg{transition:transform .3s var(--spring);flex:none}
+html[data-style="glass"] .entry:hover .go{
+  background:linear-gradient(180deg,#fff,#eaf2ff);
+  box-shadow:inset 0 1px 0 #fff,0 10px 22px rgba(24,34,66,.17);
+  transform:translateY(-1px);
+}
+html[data-style="glass"] .entry:hover .go svg{transform:translateX(3px)}
+
+/* 页脚 */
+html[data-style="glass"] footer{
+  margin-top:30px;padding:20px 24px;border-radius:var(--gx-radius);
+  display:grid;grid-template-columns:1fr auto;gap:16px 36px;
+  font-size:11.5px;color:var(--gx-dim);line-height:1.9;
+}
+html[data-style="glass"] footer .credits b{color:var(--gx-text);font-weight:600}
+html[data-style="glass"] footer .credits a{color:var(--gx-accent);border-bottom:1px solid rgba(10,132,255,.28)}
+html[data-style="glass"] footer .sign{text-align:right}
+html[data-style="glass"] footer .sign .big{
+  display:block;font-size:12px;font-weight:700;letter-spacing:.1em;
+  color:var(--gx-text);text-transform:uppercase;
+}
+
+@media (max-width:1000px){
+  html[data-style="glass"] .entry > .row{grid-template-columns:38px 176px minmax(0,1fr)}
+  html[data-style="glass"] .side{grid-column:1 / -1;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px;padding-top:4px}
+  html[data-style="glass"] .side .kv{border:0;padding:0;gap:6px;flex:none}
+  html[data-style="glass"] .side .kv .k{display:none}
+  html[data-style="glass"] .side .kv .v{font-weight:500;color:var(--gx-dim);font-size:11.5px}
+  html[data-style="glass"] .go{margin:0 0 0 auto;flex:none;padding:8px 14px}
+}
+@media (max-width:820px){
+  html[data-style="glass"] .hero{grid-template-columns:1fr;align-items:start;gap:24px}
+}
+@media (max-width:680px){
+  html[data-style="glass"] .entry > .row{grid-template-columns:30px minmax(0,1fr);gap:14px;padding:16px}
+  html[data-style="glass"] .art{grid-column:2;aspect-ratio:16/7}
+  html[data-style="glass"] .body{grid-column:2}
+  html[data-style="glass"] .side{grid-column:2;flex-direction:column;align-items:stretch;gap:8px}
+  html[data-style="glass"] .side .kv{display:flex;border-bottom:1px solid rgba(21,21,26,.08);padding-bottom:6px}
+  html[data-style="glass"] .side .kv .k{display:block}
+  html[data-style="glass"] .side .kv .v{color:var(--gx-text);font-weight:600}
+  html[data-style="glass"] .go{margin:0;width:100%}
+  html[data-style="glass"] footer{grid-template-columns:1fr}
+  html[data-style="glass"] footer .sign{text-align:left}
+  html[data-style="glass"] .bar .hint{display:none}
+}
+/* 不支持背景模糊时退化为半透明实色 */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  html[data-style="glass"] .masthead,
+  html[data-style="glass"] .hero-card,
+  html[data-style="glass"] .entry,
+  html[data-style="glass"] footer{background:rgba(255,255,255,.78)}
+}
+
+/* ==========================================================================
+   6. 非门户主题隐藏千禧年专属装饰
    ========================================================================== */
 html:not([data-style="portal"]) .only-portal{display:none !important}
 
 /* ==========================================================================
-   6. 风格切换器
+   7. 风格切换器
    ========================================================================== */
 .switcher{
   display:flex;align-items:center;justify-content:flex-end;gap:2px;
@@ -803,18 +1035,51 @@ html[data-style="glitch"] .switcher button{color:#8f8f9e;font-size:10.5px;letter
 html[data-style="glitch"] .switcher button:hover{background:#15151c;color:#dcdce2}
 html[data-style="glitch"] .switcher button[aria-pressed="true"]{background:#ff2b4e;color:#0a0004}
 
+/* 液态玻璃主题下的切换器 */
+html[data-style="glass"] .switcher{
+  justify-content:center;gap:2px;margin:14px auto 0;padding:5px;width:max-content;max-width:100%;
+  border-radius:999px;
+  background:rgba(255,255,255,.34);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid rgba(255,255,255,.62);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.92),0 8px 24px rgba(24,34,66,.08);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Arial,sans-serif;
+}
+html[data-style="glass"] .switcher .sw-label{color:var(--gx-faint);font-size:10px;letter-spacing:.16em;padding:0 10px 0 8px}
+html[data-style="glass"] .switcher button{
+  border-radius:999px;padding:6px 13px;color:var(--gx-dim);font-size:12px;font-weight:600;
+  letter-spacing:.02em;
+  transition:background .18s ease,color .18s ease,box-shadow .18s ease;
+}
+html[data-style="glass"] .switcher button:hover{background:rgba(255,255,255,.6);color:var(--gx-text)}
+html[data-style="glass"] .switcher button[aria-pressed="true"]{
+  background:#fff;color:var(--gx-text);
+  box-shadow:0 1px 3px rgba(24,34,66,.16),0 0 0 .5px rgba(24,34,66,.06),inset 0 1px 0 #fff;
+}
+
+/* 窄屏：五个按钮允许换行 */
+@media (max-width:470px){
+  .switcher{flex-wrap:wrap;justify-content:center;row-gap:4px}
+  .switcher .sw-label{padding:0 6px}
+  .switcher button{padding:4px 8px;font-size:11px}
+}
+
 /* ==========================================================================
-   7. 无障碍
+   8. 无障碍
    ========================================================================== */
 a:focus-visible,button:focus-visible{outline:2px solid #e2001a;outline-offset:3px}
 html[data-style="pixel"] a:focus-visible,
 html[data-style="pixel"] button:focus-visible{outline:2px solid #00e5ff;outline-offset:3px}
 html[data-style="glitch"] a:focus-visible,
 html[data-style="glitch"] button:focus-visible{outline:1px solid #00f0ff;outline-offset:3px}
+html[data-style="glass"] a:focus-visible,
+html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-offset:3px}
 
 @media (prefers-reduced-motion:reduce){
   *{transition:none !important;animation:none !important}
   html[data-style="glitch"] body::after{animation:none !important}
+  html[data-style="glass"] body::before{animation:none !important}
 }
 </style>
 </head>
@@ -834,6 +1099,7 @@ html[data-style="glitch"] button:focus-visible{outline:1px solid #00f0ff;outline
     <button type="button" data-set="portal" aria-pressed="false">门户</button>
     <button type="button" data-set="pixel" aria-pressed="false">像素</button>
     <button type="button" data-set="glitch" aria-pressed="false">故障</button>
+    <button type="button" data-set="glass" aria-pressed="false">液态</button>
   </div>
 
   <div class="y2k-marquee only-portal" aria-hidden="true">
@@ -849,7 +1115,7 @@ html[data-style="glitch"] button:focus-visible{outline:1px solid #00f0ff;outline
       </div>
     </div>
 
-    <div>
+    <div class="hero-card">
       <p class="lede">
         两个纯静态网页游戏，<b>打开就能玩</b>。不登录、不下载、不追踪，所有进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
       </p>
@@ -978,7 +1244,7 @@ html[data-style="glitch"] button:focus-visible{outline:1px solid #00f0ff;outline
 (function(){
   var root = document.documentElement;
   var btns = document.querySelectorAll('.switcher button');
-  var NAMES = ['clean','portal','pixel','glitch'];
+  var NAMES = ['clean','portal','pixel','glitch','glass'];
 
   function apply(style, persist){
     if (NAMES.indexOf(style) < 0) style = 'clean';
@@ -995,7 +1261,7 @@ html[data-style="glitch"] button:focus-visible{outline:1px solid #00f0ff;outline
         history.replaceState(null, '', u);
       } catch(e){}
     }
-    var tc = { clean:'#ffffff', portal:'#ffffff', pixel:'#0b0b12', glitch:'#060608' }[style];
+    var tc = { clean:'#ffffff', portal:'#ffffff', pixel:'#0b0b12', glitch:'#060608', glass:'#e8edf5' }[style];
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta && tc) meta.setAttribute('content', tc);
   }
@@ -1006,14 +1272,27 @@ html[data-style="glitch"] button:focus-visible{outline:1px solid #00f0ff;outline
     });
   }
 
-  /* 键盘：1-4 切换（不在输入框内时） */
+  /* 键盘：1-5 切换（不在输入框内时） */
   document.addEventListener('keydown', function(e){
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     var t = e.target.tagName;
     if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
     var n = parseInt(e.key, 10);
-    if (n >= 1 && n <= 4){ apply(NAMES[n-1], true); }
+    if (n >= 1 && n <= NAMES.length){ apply(NAMES[n-1], true); }
   });
+
+  /* 液态玻璃：镜面高光跟随指针 */
+  var entries = document.querySelectorAll('.entry');
+  for (var j = 0; j < entries.length; j++){
+    (function(card){
+      card.addEventListener('pointermove', function(e){
+        if (root.getAttribute('data-style') !== 'glass') return;
+        var r = card.getBoundingClientRect();
+        card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+        card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+      });
+    })(entries[j]);
+  }
 
   /* 同步按钮初始状态（含 URL 参数与 localStorage 已生效的情况） */
   apply(root.getAttribute('data-style') || 'clean', false);
