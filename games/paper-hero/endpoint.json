@@ -1,6 +1,8 @@
 {
- "updated": 1794053996000,
+ "updated": 1794054411319,
  "endpoints": [
-  "https://rip-responsibilities-dramatic-alto.trycloudflare.com"
- ]
+  "https://kenny-vacuum-branches-theta.trycloudflare.com",
+  "https://programming-congress-calendar-occurring.trycloudflare.com"
+ ],
+ "note": "本机服务 + Cloudflare 快速隧道"
 }
