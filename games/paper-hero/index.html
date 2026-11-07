@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#2A1F1A" />
+<title>纸片勇者 · 红肠王国大冒险</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FCF6E6'/%3E%3Cpath d='M16 26S6 19.4 6 13.2A5.2 5.2 0 0 1 16 10.1a5.2 5.2 0 0 1 10 3.1C26 19.4 16 26 16 26z' fill='%23E2574C'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <a class="arcade-back" id="arcadeBack" href="../../" hidden>← 游戏厅</a>
+  <script>
+    // 只有挂在游戏厅里（/games/paper-hero/）才显示返回入口
+    if (/\/games\//.test(location.pathname)) document.getElementById('arcadeBack').hidden = false;
+  </script>
+  <div id="stage">
+    <canvas id="game" width="960" height="544"></canvas>
+    <div id="touch" aria-hidden="true">
+      <div class="pad left">
+        <button class="tbtn" data-key="left" aria-label="左">◀</button>
+        <button class="tbtn" data-key="right" aria-label="右">▶</button>
+      </div>
+      <div class="pad right">
+        <button class="tbtn small" data-key="ice" aria-label="冰">冰</button>
+        <button class="tbtn small" data-key="gun" aria-label="枪">枪</button>
+        <button class="tbtn small" data-key="egg" aria-label="蛋">蛋</button>
+        <button class="tbtn jump" data-key="jump" aria-label="跳">跳</button>
+      </div>
+      <button class="tbtn small pausebtn" data-act="pause" aria-label="暂停">暂停</button>
+    </div>
+  </div>
+
+  <div id="loader">
+    <div class="paper">
+      <h1>纸片勇者</h1>
+      <p>正在剪贴纸片……</p>
+      <div class="bar"><i id="barfill"></i></div>
+    </div>
+  </div>
+
+  <!-- 玩家档案面板（本机存档，不用注册） -->
+  <div id="account" hidden>
+    <div class="acc-backdrop"></div>
+    <div class="acc-card" role="dialog" aria-modal="true" aria-labelledby="accTitle">
+      <div class="acc-tape"></div>
+      <button class="acc-close" id="accClose" aria-label="关闭">×</button>
+      <h2 id="accTitle">玩家档案</h2>
+      <p class="acc-lead">不用注册、不用验证码。起个名字就能玩，进度存在这台电脑上。</p>
+      <div id="accBody"></div>
+      <p class="acc-foot" id="accFoot"></p>
+    </div>
+  </div>
+
+  <!-- 联机面板 -->
+  <div id="online" hidden>
+    <div class="acc-backdrop"></div>
+    <div class="acc-card on-card" role="dialog" aria-modal="true" aria-labelledby="onTitle">
+      <div class="acc-tape"></div>
+      <button class="acc-close" id="onClose" aria-label="关闭">×</button>
+      <h2 id="onTitle">联机竞速</h2>
+      <p class="acc-lead" id="onLead">两台设备跑同一张图</p>
+      <div id="onBody"></div>
+      <p class="acc-foot" id="onFoot"></p>
+    </div>
+  </div>
+
+  <!-- 游戏厅账号（部署在 games/paper-hero/ 时才有；本地单机跑这里 404，正常） -->
+  <script src="../../holidays.js" onerror="void 0"></script>
+  <script src="../../arcade.js" onerror="void 0"></script>
+
+  <script src="js/util.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/paper.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/enemies.js"></script>
+  <script src="js/profiles.js"></script>
+  <script src="js/account.js"></script>
+  <script src="js/hub.js"></script>
+  <script src="js/net.js"></script>
+  <script src="js/online.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

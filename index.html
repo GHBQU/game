@@ -195,6 +195,22 @@ html[data-style="clean"] .num{
   position:absolute;left:9px;bottom:7px;font-size:8.5px;letter-spacing:.3em;
   text-transform:uppercase;color:rgba(255,255,255,.55);font-weight:600;
 }
+.art-paper{background:linear-gradient(150deg,#FFF8E7 0%,#F4E4C4 55%,#E6D2AB 100%)}
+.art-paper::before{
+  content:"";position:absolute;inset:0;
+  background-image:radial-gradient(rgba(120,90,55,.13) 1px,transparent 1px);
+  background-size:13px 13px;
+}
+.art-paper img{
+  position:absolute;left:50%;bottom:4%;height:88%;
+  transform:translateX(-50%) rotate(-2deg);
+  object-fit:contain;
+  filter:drop-shadow(0 9px 13px rgba(70,45,20,.3));
+}
+.art-paper .lbl{
+  position:absolute;left:9px;bottom:7px;font-size:8.5px;letter-spacing:.3em;
+  text-transform:uppercase;color:rgba(90,60,30,.55);font-weight:600;
+}
 
 /* 正文 */
 html[data-style="clean"] .body .title{display:block;font-size:clamp(21px,2.5vw,31px);font-weight:700;letter-spacing:-.018em;line-height:1.12}
@@ -1311,7 +1327,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </div>
 
   <div class="y2k-marquee only-portal" aria-hidden="true">
-    <span>★ 欢迎光临 小宇游戏厅 ★ 本站已收录 2 款游戏，全部免费、免注册、点开即玩 ★ 请把本站加入收藏夹 ★ 感谢您的支持 ★</span>
+    <span>★ 欢迎光临 小宇游戏厅 ★ 本站已收录 3 款游戏，全部免费、免注册、点开即玩 ★ 请把本站加入收藏夹 ★ 感谢您的支持 ★</span>
   </div>
 
   <section class="hero">
@@ -1319,25 +1335,25 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <h1 data-text="游戏厅">游戏厅</h1>
       <div class="sub">
         <span class="en">Arcade</span>
-        <span class="cn">两个游戏，零安装</span>
+        <span class="cn">三个游戏，零安装</span>
       </div>
     </div>
 
     <div class="hero-card">
       <p class="lede">
-        两个纯静态网页游戏，<b>打开就能玩</b>。不登录、不下载、不追踪，所有进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
+        三个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
       </p>
       <dl class="specs">
-        <div><dt>收录</dt><dd>02 款</dd></div>
-        <div><dt>体积</dt><dd>896 KB</dd></div>
-        <div><dt>后端</dt><dd>无</dd></div>
+        <div><dt>收录</dt><dd>03 款</dd></div>
+        <div><dt>体积</dt><dd>3.2 MB</dd></div>
+        <div><dt>后端</dt><dd>可选 · 本机隧道</dd></div>
         <div><dt>追踪</dt><dd>无</dd></div>
       </dl>
     </div>
   </section>
 
   <div class="bar">
-    <span>目录 <span class="count">01—02</span></span>
+    <span>目录 <span class="count">01—03</span></span>
     <span class="hint" id="bar-hint">点击任意条目开始</span>
   </div>
 
@@ -1410,6 +1426,38 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       </div>
     </a>
 
+    <a class="entry" href="games/paper-hero/">
+      <div class="row">
+        <div class="num">03</div>
+
+        <div class="art art-paper" aria-hidden="true">
+          <img src="games/paper-hero/assets/sprites/player3.png" alt="">
+          <span class="lbl">Paper Hero</span>
+        </div>
+
+        <div class="body">
+          <span class="title">纸片勇者</span>
+          <span class="title-cn">红肠王国大冒险</span>
+          <span class="desc">小朋友画的纸片角色做的横版闯关。8 个关卡、两场 BOSS、3 张限时挑战、同屏双人竞速，还能最多 4 个人联机跑同一张图。角色全是真·手绘剪贴画，音乐音效由 WebAudio 实时合成——一个素材文件都没有。</span>
+          <span class="tags">
+            <span>横版闯关</span><span>手绘纸片</span><span>同屏 / 联机</span><span>键盘 / 触屏</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">时长</span><span class="v">≈ 40 分钟</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">WASD / 空格</span></div>
+          <div class="kv"><span class="k">联机</span><span class="v">本机服务开着才行</span></div>
+          <div class="go">
+            <span>开始冒险</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
   </main>
 
   <div class="y2k-ad only-portal" aria-hidden="true">
@@ -1438,7 +1486,8 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
     <div class="credits">
       <b>IP, PLEASE</b> 由 <a href="https://github.com/ip-please/ip-please.github.io" target="_blank" rel="noopener">ctnyanya</a> 开发，MIT 许可，此处为静态镜像。<br>
       <b>暗夜幸存者</b> 由 wyc &amp; DeepSeek 开发。<br>
-      两个游戏均不加载任何外部资源，断网也能玩。
+      <b>纸片勇者</b> 的角色由一个小朋友手绘剪贴，代码与纸艺包装由 WorkBuddy 完成。<br>
+      三个游戏都不加载外部资源，断网也能玩；纸片勇者的联机走小宇本机的隧道，服务没开时自动变单机。
     </div>
     <div class="sign">
       <span class="big">小宇.GAY</span>
