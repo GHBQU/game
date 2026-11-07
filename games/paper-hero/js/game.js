@@ -104,6 +104,8 @@
   window.addEventListener('keydown', (e) => {
     if (PH.Account && PH.Account.opened) return; // 账号面板打开时不吃游戏按键
     if (PH.Online && PH.Online.opened) return; // 联机面板同理
+    if (PH.Skins && PH.Skins.opened) return;   // 选角色时也一样
+    if (PH.About && PH.About.opened) return;   // 更新日志 / 名单也一样
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     if (!Input.cur.has(e.code)) {
       Input.anyKey = true;
@@ -209,6 +211,8 @@
     challenge: {},
     plays: 0,
     lives: LIVES_BASE,
+    // 角色：单人一个，双人各一个
+    skins: { solo: 'hero', p1: 'hero', p2: 'player2' },
     load() {
       const d = PH.Profiles ? PH.Profiles.data() : null;
       this.unlocked = Math.max(1, (d && d.unlocked) || 1);
@@ -217,6 +221,7 @@
       this.challenge = (d && d.challenge) || {};
       this.plays = (d && d.plays) | 0;
       this.lives = d && typeof d.lives === 'number' ? d.lives : LIVES_BASE;
+      this.skins = Object.assign({ solo: 'hero', p1: 'hero', p2: 'player2' }, (d && d.skins) || {});
     },
     save() {
       if (PH.Profiles) PH.Profiles.write(this.snapshot());
@@ -229,6 +234,7 @@
         challenge: this.challenge || {},
         plays: this.plays || 0,
         lives: this.lives,
+        skins: this.skins,
       };
     },
   };
@@ -298,8 +304,13 @@
         this.player.spawn = { x: this.player.x, y: py };
         this.player.isLocal = true;
       }
+      if (!this.duel && !this.online) {
+        // 单人：用这个档案挑的角色
+        if (PH.Skins) this.player.spr = PH.Skins.key('solo');
+      }
       if (this.duel) {
         // 两个人错开一点站位，免得叠在一起
+        const skins = PH.Skins ? PH.Skins.get() : { p1: 'hero', p2: 'player2' };
         this.player.pad = makePad(PAD1_KEYS, true);
         this.player.tag = 'P1';
         this.player.color = '#E2574C';
@@ -310,7 +321,9 @@
         p2.pad = makePad(PAD2_KEYS, false);
         p2.tag = 'P2';
         p2.color = '#2F7FC4';
-        p2.spr = 'player2'; // 同屏双人：P2 换成蓝衣小子，跟 P1 一眼分得开
+        // 双人：两个人自己在面板里挑的角色
+        this.player.spr = skins.p1;
+        p2.spr = skins.p2;
         p2.showTag = true;
         p2.duel = true;
         p2.facing = 1;
@@ -624,17 +637,68 @@
       else this.burst(this.player.cx, this.player.cy, 40, { color: '#F2C14E', kind: 'paper', life: 1.6 });
     }
 
-    // 双人：两人不能跑出同一屏
-    updateDuelBounds() {
-      if (!this.duel) return;
+    // 双人：两人不能跑出同一屏。落后的人会被「牵引」着往前走。
+    // 牵引不是传送：逐帧推进并沿路检查砖块，撞到墙就贴住墙、当场挤死，绝不穿墙。
+    updateDuelBounds(dt) {
+      if (!this.duel || this.won) return;
       const [a, b] = this.players;
-      const spread = Math.abs(a.cx - b.cx);
-      if (spread > VW - 180) {
-        const lead = a.cx > b.cx ? a : b;
-        const back = lead === a ? b : a;
-        back.x = lead.x - Math.sign(lead.cx - back.cx) * (VW - 200);
-        if (back.vx * Math.sign(lead.cx - back.cx) < 0) back.vx = 0;
+      if (Math.abs(a.cx - b.cx) <= VW - 180) return;
+      const lead = a.cx > b.cx ? a : b;
+      const back = lead === a ? b : a;
+      if (back.dead || back.bubbled || back.eliminated) return;
+      const dir = Math.sign(lead.cx - back.cx) || 1;
+      const want = lead.x - dir * (VW - 200);
+      const gap = (want - back.x) * dir;
+      if (gap <= 0) return;
+      const nx = back.x + Math.min(gap, 1200 * (dt || 0.016)) * dir;
+      const hitTile = this.pullPathBlocked(back, back.x, nx, dir);
+      if (hitTile !== null) {
+        back.x = this.pullStopX(back, back.x, dir, hitTile);
+        back.vx = 0;
+        this.crushPlayer(back);
+        return;
       }
+      back.x = nx;
+      if (back.vx * dir < 0) back.vx = 0;
+    }
+
+    // 牵引路径上有实心砖吗？只看身体高度，脚下的地面不算墙
+    pullPathBlocked(p, fromX, toX, dir) {
+      const y0 = Math.floor((p.y + 6) / T);
+      const y1 = Math.floor((p.y + p.h - 6) / T);
+      const edge = dir > 0 ? fromX + p.w : fromX;
+      const dest = dir > 0 ? toX + p.w : toX;
+      const x0 = Math.floor(Math.min(edge, dest) / T);
+      const x1 = Math.floor(Math.max(edge, dest) / T);
+      for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+          if (this.solidAt(tx, ty)) return tx;
+        }
+      }
+      return null;
+    }
+
+    // 贴着墙停下，别让身体嵌进砖里
+    pullStopX(p, fromX, dir, tx) {
+      if (!isFinite(tx)) return fromX;
+      return dir > 0
+        ? Math.min(fromX, tx * T - p.w - 1)
+        : Math.max(fromX, (tx + 1) * T + 1);
+    }
+
+    // 被领先的人挤到墙上：直接挤死（后面照常走扣命 / 变泡泡流程）
+    crushPlayer(p) {
+      if (p.dead || p.eliminated) return;
+      p.hp = 0;
+      p.dead = true;
+      p.deadT = 0;
+      p.vx = 0;
+      p.vy = -260;
+      p.invuln = 0;
+      this.burst(p.cx, p.cy, 18, { color: '#E2574C', kind: 'paper' });
+      this.shake(10, 0.24);
+      PH.Audio.sfx('die');
+      this.toast((p.tag || '玩家') + ' 被挤到墙上了！');
     }
 
     updateCamera(dt, snap) {
@@ -666,7 +730,7 @@
       if (PH.Hub && PH.Hub.pushSave) PH.Hub.pushSave(Save.snapshot());
     }
 
-    // 一个玩家倒下：扣一条命 → 变泡泡；命用完了就彻底出局
+    // 一个玩家倒下：扣一条命 → 多人变泡泡 / 单人直接回存档点；命用完了就彻底出局
     downPlayer(p) {
       if (p.bubbled || p.eliminated) return;
       p.lives = Math.max(0, (p.lives == null ? Save.lives : p.lives) - 1);
@@ -685,19 +749,31 @@
         this.checkAllDown();
         return;
       }
-      p.bubbled = true;
-      p.hidden = true;
       p.dead = true;
       p.vx = 0;
       p.vy = 0;
-      const bub = new PH.Ent.Bubble(p, { alone: !this.duel });
+      if (!this.duel && !this.online) {
+        // 单人：没有泡泡这回事，扣完命当场回存档点继续跑
+        p.bubbled = false;
+        p.hidden = false;
+        p.bubble = null;
+        this.respawnBubbledPlayer(p);
+        PH.Audio.sfx('pop');
+        this.toast('少了一条命 · 回到' + (this.checkpoint ? '存档点' : '起点'));
+        this.checkAllDown();
+        return;
+      }
+      p.bubbled = true;
+      p.hidden = true;
+      const bub = new PH.Ent.Bubble(p, { online: !!this.online });
       p.bubble = bub;
       this.entities.push(bub);
       PH.Audio.sfx('pop');
-      this.toast(this.duel ? p.tag + ' 变成泡泡了，快去戳破' : '变成泡泡了');
+      this.toast(this.online ? '变成泡泡了 · 等人跳上来戳破' : p.tag + ' 变成泡泡了，跳起来戳破！');
+      this.checkAllDown();
     }
 
-    // 泡泡没人救 → 回到存档点
+    // 泡泡破了 / 单人扣命后 → 回到存档点
     respawnBubbledPlayer(p) {
       // 联机竞速没有「存档点」的概念，回到最近的安全落脚点更合理
       if (this.online && p.lastSafe) {
@@ -721,17 +797,23 @@
       p.stun = 0.35;
       p.bubbled = false;
       p.hidden = false;
+      p.bubble = null;
+      p.deadT = 0;
       this.deathT = 0;
       this.updateCamera(1, true);
       this.toast(cp ? '回到存档点' : '回到起点');
     }
 
-    // 多人都倒下了？
+    // 多人都倒下了？两人全在泡泡里就没人能救，直接判失败
     checkAllDown() {
+      // 还有人正处在倒下动画里，等这一下过去再判
+      if (this.players.some((p) => p.dead && !p.bubbled && !p.eliminated)) return false;
       const alive = this.players.filter((p) => !p.eliminated && !p.bubbled);
       if (alive.length) return false;
-      const waiting = this.entities.some((e) => e.type === 'bubble' && !e.dead);
-      if (waiting) return false; // 还有泡泡在飘，等它破
+      // 联机还有队友能赶过来救，先别判失败（泡泡自己有超时兜底）
+      if (this.online && PH.Net && PH.Net.peerCount && PH.Net.peerCount() > 1) {
+        if (this.entities.some((e) => e.type === 'bubble' && !e.dead)) return false;
+      }
       this.failed = true;
       return true;
     }
@@ -784,7 +866,24 @@
         hp: p.hp,
         mx: p.maxHp,
         bub: p.bubbled ? 1 : 0,
+        air: p.onGround ? 0 : 1,
       });
+    }
+
+    // 本地玩家跳起来戳破别人的泡泡：告诉对方「我把你救了」
+    checkGhostRescue() {
+      if (!this.online || !PH.Net || this.player.dead || this.player.eliminated || this.player.bubbled) return;
+      const p = this.player;
+      if (p.onGround) return;
+      for (const gh of this.ghosts.values()) {
+        if (!gh.bubbled || gh.gone || gh.rescueSent) continue;
+        const bx = gh.x - 10, by = gh.y - 10, bw = 46, bh = 46;
+        if (p.y + p.h > by + bh + 6) continue;
+        if (!U.hit({ x: bx, y: by, w: bw, h: bh }, { x: p.x - 4, y: p.y - 4, w: p.w + 8, h: p.h + 8 })) continue;
+        gh.rescueSent = true;
+        PH.Net.relay({ k: 'rescue', to: gh.id });
+        this.toast('戳破了 ' + gh.name + ' 的泡泡！');
+      }
     }
 
     update(dt) {
@@ -837,6 +936,7 @@
       this.updateWeakClouds(d);
       this.updateParticles(d);
       this.resolveContacts();
+      if (this.online) this.checkGhostRescue();
 
       for (const t of this.toasts) t.t += d;
       this.toasts = this.toasts.filter((t) => t.t < t.life);
@@ -1410,9 +1510,10 @@
 
     // 主角与小伴
     const hh = 128;
-    const s = PH.Assets.sizeForH('hero', hh);
+    const soloSkin = PH.Skins ? PH.Skins.key('solo') : 'hero';
+    const s = PH.Assets.sizeForH(soloSkin, hh);
     const bobY = Math.sin(t * 1.9) * 2;
-    PH.Assets.draw(ctx, 'hero', 156 - s.w / 2, 516 - hh + bobY, s.w, hh, {});
+    PH.Assets.draw(ctx, soloSkin, 156 - s.w / 2, 516 - hh + bobY, s.w, hh, {});
     const bs = PH.Assets.sizeForH('buddy', 104);
     PH.Assets.draw(ctx, 'buddy', 812 - bs.w / 2, 520 - 104 + Math.sin(t * 1.7 + 1) * 3, bs.w, 104, { flip: true });
 
@@ -1500,30 +1601,33 @@
 
     // 菜单
     G.buttons = [];
-    const bw = 168, bh = 52, gap2 = 12;
+    const bw = 145, bh = 52, gap2 = 10;
     const by = 350;
-    const rowW = bw * 5 + gap2 * 4;
+    const rowW = bw * 6 + gap2 * 5;
     const rowX = VW / 2 - rowW / 2;
     addBtn('start', rowX, by, bw, bh, '开始冒险', () => {
       G.mode = 'single';
       const id = PH.LEVEL_ORDER[Math.min(Save.unlocked - 1, PH.LEVEL_ORDER.length - 1)];
       startLevel(id);
-    }, { color: '#FFF3D0', size: 19 });
+    }, { color: '#FFF3D0', size: 18 });
     addBtn('select', rowX + (bw + gap2), by, bw, bh, '关卡选择', () => {
       G.mode = 'single';
       setState('select');
-    }, { color: '#FBF3DF', size: 19 });
+    }, { color: '#FBF3DF', size: 18 });
     addBtn('duel', rowX + (bw + gap2) * 2, by, bw, bh, '双人竞速', () => {
       G.mode = 'duel';
       setState('select');
-    }, { color: '#EAF1FB', size: 19, textColor: '#2F5F96', accent: 'rgba(47,127,196,0.45)' });
+    }, { color: '#EAF1FB', size: 18, textColor: '#2F5F96', accent: 'rgba(47,127,196,0.45)' });
     addBtn('online', rowX + (bw + gap2) * 3, by, bw, bh, '联机竞速', () => {
       PH.Online.open();
-    }, { color: '#F3EBFB', size: 19, textColor: '#6B4A96', accent: 'rgba(139,119,201,0.5)' });
+    }, { color: '#F3EBFB', size: 18, textColor: '#6B4A96', accent: 'rgba(139,119,201,0.5)' });
     addBtn('help', rowX + (bw + gap2) * 4, by, bw, bh, '操作说明', () => {
       G.mode = 'single';
       setState('help');
-    }, { color: '#FBF3DF', size: 19 });
+    }, { color: '#FBF3DF', size: 18 });
+    addBtn('about', rowX + (bw + gap2) * 5, by, bw, bh, '更新日志', () => {
+      PH.About.open('log');
+    }, { color: '#FDF1DD', size: 18, textColor: '#8A5A16', accent: 'rgba(214,150,50,0.45)' });
 
     // 右上角：本机档案
     const pName = PH.Profiles ? PH.Profiles.name() : '';
@@ -1533,6 +1637,18 @@
       size: 13.5,
       textColor: '#2F6B33',
       accent: 'rgba(76,175,80,0.5)',
+    });
+    addBtn('skins', VW - 152, 60, 138, 34, '角色 · ' + (PH.Skins ? PH.Skins.label() : '勇者'), () => PH.Skins.open(), {
+      color: '#F3EBFB',
+      size: 13,
+      textColor: '#6B4A96',
+      accent: 'rgba(139,119,201,0.5)',
+    });
+    addBtn('creators', VW - 152, 98, 138, 32, '创作者名单', () => PH.About.open('credits'), {
+      color: '#FDF1DD',
+      size: 12.5,
+      textColor: '#8A5A16',
+      accent: 'rgba(214,150,50,0.45)',
     });
 
     if (Input.pressed('confirm') && G.buttons.length) {
@@ -2439,19 +2555,50 @@
     const foot = g.y + g.h;
     const bob = g.pose === 'run' ? Math.sin(g.animT * 15) * 2.2 : Math.sin(g.animT * 2.4) * 1.2;
 
-    ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = '#3A2A1E';
-    ctx.beginPath();
-    ctx.ellipse(cx, foot - 2, s.w * 0.3, 4.5, 0, 0, 7);
-    ctx.fill();
-    ctx.restore();
+    if (g.bubbled) {
+      // 倒下的对手也是一颗泡泡，跳上去才能戳破
+      const bcy = foot - 36;
+      const r = 25 + Math.sin(g.animT * 3) * 1.2;
+      ctx.save();
+      const grad = ctx.createRadialGradient(cx - r * 0.35, bcy - r * 0.4, r * 0.15, cx, bcy, r);
+      grad.addColorStop(0, 'rgba(255,255,255,0.7)');
+      grad.addColorStop(1, 'rgba(160,210,230,0.24)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, bcy, r, 0, 7);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+      PH.Assets.draw(ctx, spr, cx - s.w * 0.27, bcy - 17, s.w * 0.54, 33, {
+        flip: g.facing < 0,
+        alpha: 0.85,
+        shadow: false,
+      });
+      PH.Paper.text(ctx, '↑ 跳起来戳破', cx, bcy - r - 8, {
+        size: 11,
+        align: 'center',
+        color: '#3A2A1E',
+        weight: '800',
+        outline: 'rgba(255,248,232,0.9)',
+        outlineW: 3,
+      });
+    } else {
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = '#3A2A1E';
+      ctx.beginPath();
+      ctx.ellipse(cx, foot - 2, s.w * 0.3, 4.5, 0, 0, 7);
+      ctx.fill();
+      ctx.restore();
 
-    PH.Assets.draw(ctx, spr, cx - s.w / 2, foot - h + bob, s.w, h, {
-      flip: g.facing < 0,
-      alpha: 0.5,
-      shadow: false,
-    });
+      PH.Assets.draw(ctx, spr, cx - s.w / 2, foot - h + bob, s.w, h, {
+        flip: g.facing < 0,
+        alpha: 0.5,
+        shadow: false,
+      });
+    }
 
     // 名字牌
     const labelY = foot - h - 7 + bob + (g.labelDy || 0);
@@ -2956,7 +3103,15 @@
         startLevel(G.levelId);
       }, { color: '#F6EEDC', size: 20 });
     }
-    addBtn('acc', bx, y + 208, bw2, bh2, '档案 · ' + (PH.Profiles ? PH.Profiles.name() : '玩家'), () => PH.Account.open(), { color: '#F6EEDC', size: 17 });
+    if (onlineRace) {
+      addBtn('acc', bx, y + 208, bw2, bh2, '档案 · ' + (PH.Profiles ? PH.Profiles.name() : '玩家'), () => PH.Account.open(), { color: '#F6EEDC', size: 17 });
+    } else {
+      const halfW = (bw2 - 8) / 2;
+      addBtn('acc', bx, y + 208, halfW, bh2, '档案', () => PH.Account.open(), { color: '#F6EEDC', size: 18 });
+      addBtn('skins', bx + halfW + 8, y + 208, halfW, bh2, '角色', () => PH.Skins.open(), {
+        color: '#F3EBFB', size: 18, textColor: '#6B4A96', accent: 'rgba(139,119,201,0.5)',
+      });
+    }
     addBtn('sound', bx, y + 260, bw2, bh2, (PH.Audio.muted ? '声音：已关' : '声音：开'), () => {
       PH.Audio.toggleMute();
     }, { color: (PH.Audio.muted ? '#EFE6D2' : '#EAF6E4'), size: 19, textColor: (PH.Audio.muted ? '#7A6650' : '#2F6B33') });
@@ -2971,7 +3126,10 @@
       addBtn('quit', bx, y + 312, bw2, bh2, pauseLabel, () => setState(pauseBack), { color: '#F6EEDC', size: 18 });
     }
 
-    PH.Paper.text(ctx, '按 Esc / P 也能直接继续', lc, y + h - 24, {
+    addBtn('aboutPause', bx, y + 364, bw2, 32, '更新日志 · 创作者名单', () => PH.About.open('log'), {
+      color: '#FDF1DD', size: 13.5, textColor: '#8A5A16', accent: 'rgba(214,150,50,0.45)',
+    });
+    PH.Paper.text(ctx, '按 Esc / P 也能直接继续', lc, y + h - 10, {
       size: 11.5,
       align: 'center',
       color: 'rgba(90,70,50,.48)',
@@ -3326,7 +3484,17 @@
       if (typeof d.hp === 'number') g.hp = Math.max(0, d.hp);
       if (typeof d.mx === 'number') g.maxHp = Math.max(1, d.mx);
       g.bubbled = !!d.bub;
+      g.air = !!d.air;
+      if (!g.bubbled) g.rescueSent = false;
       g.lastSeen = G.stateT;
+    } else if (d.k === 'rescue') {
+      // 有人跳起来戳破了我的泡泡
+      if (!d.to || d.to !== PH.Net.myId) return;
+      const b = w.player && w.player.bubble;
+      if (b && !b.dead && w.player.bubbled) {
+        b.pop(w, true);
+        w.toast('被 ' + PH.Net.nameOf(from) + ' 救出来了！');
+      }
     } else if (d.k === 'fin') {
       const g = w.ghosts.get(from);
       if (g) {
@@ -3546,6 +3714,8 @@
   function bootHub() {
     if (!PH.Hub) return;
     PH.Hub.boot().then(async () => {
+      // 账号可能刚绑到同名档案上，重新读一次进度
+      if (PH.applyProfile) PH.applyProfile('switch');
       // 服务开着才走游戏厅门禁；没开就纯单机，不碰账号
       const code = PH.Hub.gateCode();
       if (code && /\/games\//.test(location.pathname)) {

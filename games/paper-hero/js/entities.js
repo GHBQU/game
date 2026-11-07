@@ -1137,8 +1137,9 @@
 
   // 回血心：小的心补 1 心，大的（金色）补满
   /* ---------------- 死亡泡泡 ---------------- */
-  // 玩家倒下后变成一颗纸泡泡，队友碰一下就能把人救出来；
-  // 没人救就自己飘一会儿破掉，回到存档点复活。
+  // 只有多人模式才有：玩家倒下后变成一颗纸泡泡，飘在半空。
+  // 队友必须「跳起来够到」才能戳破救人，站在地上蹭一下不算。
+  // 联机时等不到队友有超时兜底；同屏双人没有，全成泡泡就判失败。
   class Bubble {
     constructor(player, opts) {
       opts = opts || {};
@@ -1152,9 +1153,15 @@
       this.t = 0;
       this.dead = false;
       this.rescued = false;
-      this.alone = !!opts.alone; // 单人：只能自己破
-      this.wait = this.alone ? 3.0 : 7.0;
+      this.online = !!opts.online;
+      // wait = 0 表示永不自动破，只能被玩家戳破
+      this.wait = this.online ? 24 : 0;
       this.mini = 0.5;
+    }
+
+    // 从上方跳起来够到：必须离地，且脚底不在泡泡下方太多
+    canReach(box) {
+      return !box.onGround && box.y + box.h <= this.y + this.h + 6;
     }
 
     update(dt, g) {
@@ -1162,22 +1169,30 @@
       // 慢慢飘到半空再上下浮
       const target = this.baseY - 34;
       this.y = U.lerp(this.y, target, Math.min(1, dt * 2.2)) + Math.sin(this.t * 2.6) * 0.6;
-      // 队友碰一下 = 救出
       if (!this.rescued) {
+        // 同屏队友：跳起来碰
         for (const pl of g.players || []) {
-          if (pl === this.player || pl.dead || pl.eliminated) continue;
-          if (U.hit(this, { x: pl.x - 10, y: pl.y - 10, w: pl.w + 20, h: pl.h + 20 })) {
+          if (pl === this.player || pl.dead || pl.eliminated || pl.bubbled || pl.hidden) continue;
+          if (!this.canReach(pl)) continue;
+          if (U.hit(this, { x: pl.x - 6, y: pl.y - 6, w: pl.w + 12, h: pl.h + 12 })) {
             this.pop(g, true);
             return;
           }
         }
+        // 联机：别的玩家（幽灵）跳上来也能戳破
+        if (this.online && g.ghosts) {
+          for (const gh of g.ghosts.values()) {
+            if (gh.bubbled || gh.gone || !gh.air) continue;
+            if (!this.canReach(gh)) continue;
+            if (U.hit(this, { x: gh.x - 4, y: gh.y - 4, w: gh.w + 8, h: gh.h + 8 })) {
+              this.pop(g, true);
+              return;
+            }
+          }
+        }
       }
-      if (this.alone && this.t > 1.2 && g.player && !g.player.dead) {
-        // 单人：等一小会儿自动破，不用干等
-        if (this.t > this.wait) this.pop(g, false);
-      } else if (this.t > this.wait) {
-        this.pop(g, false);
-      }
+      // 联机兜底：等不到队友，别把人永远卡在泡泡里
+      if (this.wait > 0 && this.t > this.wait) this.pop(g, false);
     }
 
     pop(g, rescued) {
@@ -1233,17 +1248,28 @@
       const spr = this.player.spr || 'hero';
       const s = PH.Assets.sizeForH(spr, 34);
       PH.Assets.draw(ctx, spr, cx - s.w / 2, cy - s.h / 2 + 4, s.w, s.h, { alpha: 0.92, flip: this.player.facing < 0 });
-      // 倒计时小弧
-      if (left > 0 && left < this.wait) {
+      // 联机有兜底倒计时；同屏双人没有，改画一个跳起来的提示
+      if (left > 0 && this.wait > 0) {
         ctx.save();
-        ctx.strokeStyle = this.alone ? 'rgba(200,68,58,0.5)' : 'rgba(47,127,196,0.55)';
+        ctx.strokeStyle = 'rgba(47,127,196,0.55)';
         ctx.lineWidth = 2.4;
         ctx.beginPath();
         ctx.arc(cx, cy, r + 5, -Math.PI / 2, -Math.PI / 2 + (left / this.wait) * Math.PI * 2);
         ctx.stroke();
         ctx.restore();
+      } else {
+        const bob = Math.sin(this.t * 4) * 2;
+        ctx.save();
+        ctx.fillStyle = 'rgba(47,127,196,0.82)';
+        ctx.beginPath();
+        ctx.moveTo(cx, this.y - 14 + bob);
+        ctx.lineTo(cx - 6, this.y - 5 + bob);
+        ctx.lineTo(cx + 6, this.y - 5 + bob);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
       }
-      PH.Paper.text(ctx, this.alone ? '快戳破' : '来救我', cx, this.y - 10, {
+      PH.Paper.text(ctx, this.online ? '跳起来戳破！' : '↑ 跳起来戳破', cx, this.y - 20 + Math.sin(this.t * 4) * 1.5, {
         size: 11,
         align: 'center',
         color: '#3A2A1E',

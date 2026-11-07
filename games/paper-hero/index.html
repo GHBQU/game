@@ -39,16 +39,46 @@
     </div>
   </div>
 
-  <!-- 玩家档案面板（本机存档，不用注册） -->
+  <!-- 玩家档案面板：和游戏厅主页共用账号，游戏内不注册 -->
   <div id="account" hidden>
     <div class="acc-backdrop"></div>
     <div class="acc-card" role="dialog" aria-modal="true" aria-labelledby="accTitle">
       <div class="acc-tape"></div>
       <button class="acc-close" id="accClose" aria-label="关闭">×</button>
       <h2 id="accTitle">玩家档案</h2>
-      <p class="acc-lead">不用注册、不用验证码。起个名字就能玩，进度存在这台电脑上。</p>
+      <p class="acc-lead">和游戏厅主页共用同一个账号，游戏里不注册。进度存在这台电脑上。</p>
       <div id="accBody"></div>
       <p class="acc-foot" id="accFoot"></p>
+    </div>
+  </div>
+
+  <!-- 角色面板 -->
+  <div id="skins" hidden>
+    <div class="acc-backdrop"></div>
+    <div class="acc-card skin-card" role="dialog" aria-modal="true" aria-labelledby="skinTitle">
+      <div class="acc-tape"></div>
+      <button class="acc-close" id="skinClose" aria-label="关闭">×</button>
+      <h2 id="skinTitle">选个角色</h2>
+      <p class="acc-lead">单人挑一个；双人同屏 P1、P2 各挑一个，选到同一个会自动换开。</p>
+      <div id="skinBody"></div>
+      <p class="acc-foot" id="skinFoot"></p>
+    </div>
+  </div>
+
+  <!-- 关于：更新日志 + 创作者名单 -->
+  <div id="about" hidden>
+    <div class="acc-backdrop"></div>
+    <div class="acc-card about-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+      <div class="acc-tape"></div>
+      <button class="acc-close" id="aboutClose" aria-label="关闭">×</button>
+      <h2 id="aboutTitle">关于纸片勇者</h2>
+      <p class="acc-lead">一张张手绘蜡笔画，剪成了一个能跑能跳的小世界。</p>
+      <div class="about-tabs">
+        <button class="about-tab on" data-tab="log" id="aboutTabLog">更新日志</button>
+        <button class="about-tab" data-tab="credits" id="aboutTabCredits">创作者名单</button>
+      </div>
+      <div class="about-body" id="aboutBody"></div>
+      <p class="acc-foot" id="aboutFoot"></p>
     </div>
   </div>
 
@@ -77,10 +107,13 @@
   <script src="js/entities.js"></script>
   <script src="js/enemies.js"></script>
   <script src="js/profiles.js"></script>
+  <script src="js/identity.js"></script>
   <script src="js/account.js"></script>
   <script src="js/hub.js"></script>
   <script src="js/net.js"></script>
   <script src="js/online.js"></script>
+  <script src="js/skins.js"></script>
+  <script src="js/about.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>

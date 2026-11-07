@@ -86,7 +86,8 @@
         this.status = 'offline';
         this.endpoint = '';
         this.rtt = 0;
-        this.lastError = '本机服务没开，联机和账号都先关掉';
+        this.lastError = '本机服务没开，联机关掉；账号改用离线密钥验证';
+        this.loadAccount();
         this.emit('change');
         return false;
       }
@@ -125,24 +126,28 @@
     },
 
     /* ---------------- 账号 ---------------- */
+    // 账号一律来自游戏厅主页（或离线密钥验证后的本机账号），游戏内不注册。
+    // 服务器在不在线都要把账号绑到同名档案上，只是「云端同步」需要服务在线。
     loadAccount() {
-      let a = null;
+      const u = PH.Identity ? PH.Identity.current() : null;
+      let invited = false;
       try {
-        if (window.Arcade && window.Arcade.current) a = window.Arcade.current();
+        const a = window.Arcade && window.Arcade.current ? window.Arcade.current() : null;
+        invited = !!(a && a.invited);
       } catch (e) {}
-      this.account = a ? { name: a.name, invited: !!a.invited } : null;
-      if (this.account && PH.Profiles && PH.Profiles.bindAccount) {
-        PH.Profiles.bindAccount(this.account.name);
-      }
+      this.account = u ? { name: u.name, invited } : null;
+      if (u && PH.Identity.bind) PH.Identity.bind();
+      if (PH.Account && PH.Account.opened) PH.Account.render();
+      return this.account;
     },
 
     hasArcade() {
       return !!(window.Arcade && window.Arcade.current);
     },
 
-    // 有服务器 + 有账号 = 走账号；否则纯本机档案
+    // 云端存档：必须服务在线 + 有主页账号；离线时进度只存本机
     useAccount() {
-      return this.status === 'online' && !!this.account;
+      return this.status === 'online' && !!this.account && !!window.Arcade;
     },
 
     displayName() {

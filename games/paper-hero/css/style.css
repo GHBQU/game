@@ -158,7 +158,7 @@ body.touch.playing #touch { display: block; }
 }
 
 /* ---------------- 账号面板 ---------------- */
-#account {
+#account, #skins, #online, #about {
   position: fixed;
   inset: 0;
   z-index: 40;
@@ -168,7 +168,7 @@ body.touch.playing #touch { display: block; }
   padding: 18px;
   font-family: "Yuanti SC", "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
-#account[hidden] { display: none; }
+#account[hidden], #skins[hidden], #online[hidden], #about[hidden] { display: none; }
 
 .acc-backdrop {
   position: absolute;
@@ -641,3 +641,253 @@ body.touch.playing #touch { display: block; }
 .arcade-back:hover { opacity: 1; color: #3A2A1E; }
 .arcade-back[hidden] { display: none; }
 @media (max-width: 520px) { .arcade-back { left: 8px; top: 8px; padding: 4px 8px; font-size: 11px; opacity: 0.45; } }
+
+/* ---------------- 角色选择 ---------------- */
+.skin-card { width: min(94vw, 472px); }
+
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 13px;
+}
+
+.skin-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px 7px;
+  border-radius: 10px;
+  border: 1.6px dashed rgba(70, 50, 32, 0.22);
+  background: rgba(255, 255, 255, 0.55);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, transform 0.08s, box-shadow 0.14s;
+}
+.skin-item:hover { background: rgba(255, 255, 255, 0.92); transform: translateY(-1px); }
+.skin-item:active { transform: scale(0.98); }
+.skin-item.on {
+  border-style: solid;
+  border-color: rgba(76, 175, 80, 0.62);
+  background: rgba(234, 246, 228, 0.92);
+  box-shadow: 0 2px 0 rgba(76, 175, 80, 0.26);
+}
+
+.skin-pic {
+  width: 100%;
+  height: 76px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.skin-pic img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 4px rgba(120, 80, 20, 0.18));
+}
+
+.skin-item b { font-size: 12.5px; font-weight: 800; color: #3a2a1e; }
+.skin-item i { font-style: normal; font-size: 10px; color: rgba(70, 50, 32, 0.5); }
+
+.skin-ck {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #3f8b46;
+}
+
+.skin-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+.skin-tag {
+  width: 24px;
+  flex: 0 0 24px;
+  font-size: 15px;
+  font-weight: 900;
+  font-family: "Kaiti SC", "STKaiti", serif;
+  letter-spacing: 0.5px;
+}
+.skin-mini {
+  flex: 1;
+  max-width: 72px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 9px;
+  border: 1.6px solid rgba(70, 50, 32, 0.16);
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, transform 0.08s;
+}
+.skin-mini:hover { background: rgba(255, 255, 255, 0.92); }
+.skin-mini:active { transform: scale(0.97); }
+.skin-mini img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.skin-mini.on {
+  background: #fff;
+  border-color: var(--c, rgba(70, 50, 32, 0.5));
+  box-shadow: 0 2px 0 rgba(120, 80, 20, 0.14);
+}
+
+@media (max-width: 520px) {
+  .skin-pic { height: 62px; }
+  .skin-item b { font-size: 11.5px; }
+  .skin-item i { display: none; }
+  .skin-mini { height: 48px; }
+  .skin-line { gap: 5px; }
+}
+
+/* ---------------- 账号共用 / 离线验证 ---------------- */
+.id-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(70, 50, 32, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+}
+.id-card.off { background: rgba(255, 244, 222, 0.78); border-color: rgba(196, 130, 52, 0.38); }
+.id-av {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 17px;
+  font-weight: 900;
+  font-family: "Kaiti SC", "STKaiti", serif;
+  background: linear-gradient(160deg, #ffe1a2, #e2a93b);
+  color: #6b4515;
+}
+.id-card.off .id-av { background: linear-gradient(160deg, #dbe9f8, #7fa8d4); color: #1e4b6b; }
+.id-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.id-who b { font-size: 14px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.id-who i { font-size: 11px; font-style: normal; color: rgba(70, 50, 32, 0.58); }
+.id-badge {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #2f6b33;
+  background: rgba(76, 175, 80, 0.16);
+}
+.id-card.off .id-badge { color: #8a5a16; background: rgba(214, 150, 50, 0.18); }
+.id-note {
+  margin: 0 0 12px;
+  padding: 8px 11px;
+  border-left: 3px solid rgba(196, 68, 58, 0.55);
+  border-radius: 0 6px 6px 0;
+  background: rgba(255, 255, 255, 0.45);
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: rgba(70, 50, 32, 0.72);
+}
+.id-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: #a8552f;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.id-key {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11.5px;
+  color: #8a3c30;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ---------------- 关于：更新日志 + 创作者 ---------------- */
+.about-card { width: min(94vw, 560px); padding-bottom: 18px; }
+.about-tabs { display: flex; gap: 7px; margin-bottom: 12px; }
+.about-tab {
+  flex: 1;
+  height: 38px;
+  border: 1.5px solid rgba(70, 50, 32, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  color: rgba(70, 50, 32, 0.72);
+  font-size: 13.5px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+.about-tab.on {
+  background: linear-gradient(180deg, #e06a56 0%, #c8443a 100%);
+  border-color: #9c3028;
+  color: #fff8ee;
+  box-shadow: 0 2px 0 #8f2d26;
+}
+.about-body {
+  max-height: min(56vh, 420px);
+  overflow-y: auto;
+  padding: 4px 4px 2px;
+  scrollbar-width: thin;
+}
+.about-thanks {
+  margin: 0 0 14px;
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1.5px dashed rgba(70, 50, 32, 0.22);
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: rgba(70, 50, 32, 0.8);
+}
+.log-rel { margin-bottom: 15px; }
+.log-rel h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #8a3c30;
+  font-family: "Kaiti SC", "STKaiti", serif;
+  letter-spacing: 0.5px;
+}
+.log-rel h3 span {
+  margin-left: 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(70, 50, 32, 0.48);
+  font-family: inherit;
+}
+.log-rel ul { margin: 0; padding-left: 18px; }
+.log-rel li { margin-bottom: 3px; font-size: 12px; line-height: 1.7; color: rgba(58, 42, 30, 0.84); }
+.credit-rows { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+.credit-row {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(70, 50, 32, 0.14);
+}
+.credit-row b { display: block; font-size: 11px; color: rgba(70, 50, 32, 0.55); margin-bottom: 3px; font-weight: 700; }
+.credit-row span { font-size: 13.5px; font-weight: 800; color: #3a2a1e; letter-spacing: 0.4px; }
+.credit-row.wide { grid-column: 1 / -1; }
+.credit-foot {
+  margin: 13px 0 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.8;
+  color: rgba(90, 70, 50, 0.66);
+}
+@media (max-width: 520px) {
+  .credit-rows { grid-template-columns: 1fr; }
+  .about-card { width: 96vw; }
+}
