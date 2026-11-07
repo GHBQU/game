@@ -699,6 +699,20 @@
 
     // 泡泡没人救 → 回到存档点
     respawnBubbledPlayer(p) {
+      // 联机竞速没有「存档点」的概念，回到最近的安全落脚点更合理
+      if (this.online && p.lastSafe) {
+        p.reset(p.lastSafe.x, p.lastSafe.y);
+        p.hp = p.maxHp;
+        p.invuln = 1.8;
+        p.stun = 0.35;
+        p.bubbled = false;
+        p.hidden = false;
+        p.dead = false;
+        p.deadT = 0;
+        this.deathT = 0;
+        this.toast('泡泡破了 · 回到落脚点');
+        return;
+      }
       const cp = this.checkpoint;
       const sp = cp ? { x: cp.x, y: cp.y } : p.spawn || { x: this.def.start.x * T + 3, y: 0 };
       p.reset(sp.x, sp.y);
@@ -767,6 +781,9 @@
         f: p.facing,
         po: p.pose,
         t: Math.round(this.raceTime * 10) / 10,
+        hp: p.hp,
+        mx: p.maxHp,
+        bub: p.bubbled ? 1 : 0,
       });
     }
 
@@ -2353,7 +2370,6 @@
 
     const chip = (idx, x) => {
       const pl = list[idx];
-      const pct = Math.round(prog(pl) * 100);
       PH.Paper.panel(ctx, x, 12, 188, 46, { fill: '#FCF6E6', fill2: '#EDE0C4', seed: 7 + idx * 5, shadowAlpha: 0.26, blur: 9 });
       ctx.save();
       ctx.globalAlpha = 0.3;
@@ -2370,7 +2386,7 @@
       if (pl.stun > 0) {
         PH.Paper.text(ctx, '摔了', x + 74, 40, { size: 12, color: 'rgba(200,68,58,.9)' });
       }
-      PH.Paper.text(ctx, pct + '%', x + 176, 42, { size: 18, align: 'right', color: '#4A3626', weight: '800', font: PH.Fonts.mono });
+      drawMiniHearts(ctx, x + 176, 39, pl.hp, pl.maxHp);
       if (lead === idx) PH.Paper.icon(ctx, 'star', x + 180, 22, 12, '#E2A93B');
     };
     chip(0, 14);
@@ -2492,10 +2508,9 @@
     const rx = VW - rw - 14, ry = 12;
     PH.Paper.panel(ctx, rx, ry, rw, rh, { fill: '#FCF6E6', fill2: '#EDE0C4', seed: 21, shadowAlpha: 0.26, blur: 9 });
     PH.Paper.text(ctx, '名次', rx + 13, ry + 22, { size: 11.5, color: 'rgba(90,70,50,.55)', weight: '700' });
-    PH.Paper.text(ctx, '进度 / 用时', rx + rw - 13, ry + 22, { size: 11.5, align: 'right', color: 'rgba(90,70,50,.55)' });
+    PH.Paper.text(ctx, '生命 / 用时', rx + rw - 13, ry + 22, { size: 11.5, align: 'right', color: 'rgba(90,70,50,.55)' });
     rows.forEach((r, i) => {
       const y = ry + 44 + i * 24;
-      const shown = r.gone ? '离线' : r.finished ? r.time.toFixed(1) + ' 秒' : Math.round(r.pct * 100) + '%';
       ctx.save();
       ctx.globalAlpha = r.gone ? 0.4 : 1;
       ctx.fillStyle = r.color;
@@ -2516,13 +2531,18 @@
         color: r.me ? '#3A2A1E' : 'rgba(60,42,30,0.82)',
         weight: r.me ? '800' : '600',
       });
-      PH.Paper.text(ctx, shown, rx + rw - 14, y, {
-        size: 13,
-        align: 'right',
-        color: r.finished ? '#3F8B46' : 'rgba(60,42,30,0.6)',
-        weight: r.finished ? '800' : '700',
-        font: r.finished ? PH.Fonts.mono : undefined,
-      });
+      if (r.gone || r.finished) {
+        PH.Paper.text(ctx, r.gone ? '离线' : r.time.toFixed(1) + ' 秒', rx + rw - 14, y, {
+          size: 13,
+          align: 'right',
+          color: r.finished ? '#3F8B46' : 'rgba(60,42,30,0.45)',
+          weight: r.finished ? '800' : '600',
+          font: r.finished ? PH.Fonts.mono : undefined,
+        });
+      } else {
+        // 不报百分比，直接看还剩几颗心
+        drawMiniHearts(ctx, rx + rw - 14, y - 4, r.hp, r.maxHp);
+      }
     });
   }
 
@@ -2567,6 +2587,16 @@
   }
 
   // 剩余生命：一颗小泡泡 + ×N
+  // 一排小纸心（右对齐），给多人界面显示各自血量
+  function drawMiniHearts(ctx, rightX, y, hp, maxHp) {
+    const n = Math.max(1, Math.min(5, maxHp | 0 || 3));
+    const step = 14;
+    for (let i = 0; i < n; i++) {
+      const hx = rightX - (n - 1 - i) * step - 7;
+      PH.Paper.heart(ctx, hx, y, 13, i < hp, '#E2574C');
+    }
+  }
+
   function drawLifeChip(ctx, x, y, n) {
     ctx.save();
     const grad = ctx.createRadialGradient(x - 3, y - 4, 1, x, y, 12);
@@ -3219,6 +3249,8 @@
         color: '#E2574C',
         me: true,
         pct: U.clamp((w.player.cx - start) / span, 0, 1),
+        hp: w.player.hp,
+        maxHp: w.player.maxHp,
         finished: !!w.won,
         time: w.won ? w.raceTime : null,
       },
@@ -3231,6 +3263,8 @@
         me: false,
         gone: !!g.gone,
         pct: U.clamp((g.x + 13 - start) / span, 0, 1),
+        hp: typeof g.hp === 'number' ? g.hp : 3,
+        maxHp: g.maxHp || 3,
         finished: !!g.finished,
         time: g.finished ? g.time : null,
       });
@@ -3276,6 +3310,9 @@
           pose: d.po || 'idle',
           spr: PH.Net.skinOf(from),
           animT: 0,
+          hp: 3,
+          maxHp: 3,
+          bubbled: false,
           finished: false,
           time: null,
           draw: drawGhostSprite,
@@ -3286,6 +3323,9 @@
       g.ty = d.y;
       g.facing = d.f || 1;
       g.pose = d.po || 'idle';
+      if (typeof d.hp === 'number') g.hp = Math.max(0, d.hp);
+      if (typeof d.mx === 'number') g.maxHp = Math.max(1, d.mx);
+      g.bubbled = !!d.bub;
       g.lastSeen = G.stateT;
     } else if (d.k === 'fin') {
       const g = w.ghosts.get(from);
