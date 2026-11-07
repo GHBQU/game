@@ -353,6 +353,12 @@
             this._note(660 / Math.pow(1.28, i), now + d, 0.12, 'square', 0.16, this.sfxBus, 0.004, 0.2)
           );
           break;
+        case 'pop': {
+          // 泡泡破掉：一声短促的「啵」
+          this._note(880, now, 0.05, 'sine', 0.16, this.sfxBus, 0.001, 0.12);
+          this._note(1320, now + 0.02, 0.07, 'triangle', 0.09, this.sfxBus, 0.001, 0.14);
+          break;
+        }
         case 'shoot':
           this.sweep(1000, 300, 0.09, 'square', 0.13);
           break;

@@ -109,6 +109,7 @@
           best: d.best || {},
           challenge: d.challenge || {},
           plays: d.plays || 0,
+          lives: typeof d.lives === 'number' ? d.lives : 5,
           lastAt: now,
         })
       );

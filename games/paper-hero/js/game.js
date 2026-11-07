@@ -196,6 +196,11 @@
   }
 
   /* ---------------- 存档（每个本机档案一套） ---------------- */
+  const LIVES_BASE = 5;   // 初始生命
+  const LIVES_MAX = 9;    // 加命道具的上限
+  const BUBBLE_ALONE = 3.0; // 单人等多久自动破
+  const BUBBLE_TEAM = 7.0;  // 多人等队友来救的时限
+
   const Save = {
     unlocked: 1,
     cleared: {},
@@ -203,6 +208,7 @@
     // 限时挑战最好成绩：{ 'C-1': { time: 42.3, score: 1200 } }
     challenge: {},
     plays: 0,
+    lives: LIVES_BASE,
     load() {
       const d = PH.Profiles ? PH.Profiles.data() : null;
       this.unlocked = Math.max(1, (d && d.unlocked) || 1);
@@ -210,6 +216,7 @@
       this.best = (d && d.best) || {};
       this.challenge = (d && d.challenge) || {};
       this.plays = (d && d.plays) | 0;
+      this.lives = d && typeof d.lives === 'number' ? d.lives : LIVES_BASE;
     },
     save() {
       if (PH.Profiles) PH.Profiles.write(this.snapshot());
@@ -221,6 +228,7 @@
         best: this.best || {},
         challenge: this.challenge || {},
         plays: this.plays || 0,
+        lives: this.lives,
       };
     },
   };
@@ -262,6 +270,7 @@
       const py = (def.start.y + 1) * T - 56;
       this.player = new PH.Player(px, py);
       this.player.spawn = { x: px, y: py };
+      this.player.lives = Save.lives;
       this.players = [this.player];
       this.duel = !!(opts && opts.duel);
       this.winner = null;
@@ -269,11 +278,15 @@
 
       /* ---- 联机竞速：本地只跑自己那一个角色，别人是「幽灵」 ---- */
       this.online = !!(opts && opts.online);
+      this.deaths = 0;
+      this.failed = false;
+      this.gainedLife = 0;
       this.raceTime = 0;
       this.countdown = this.online ? 3.4 : 0;
       this.ghosts = new Map();
       this.netT = 0;
       if (this.online) {
+        this.player.lives = Save.lives;
         this.player.tag = '你';
         this.player.color = '#E2574C';
         this.player.showTag = false;
@@ -303,8 +316,12 @@
         p2.facing = 1;
         this.p2 = p2;
         this.players.push(p2);
-        this.player.hp = 99;
-        p2.hp = 99;
+        this.player.hp = 3;
+        this.player.maxHp = 3;
+        p2.hp = 3;
+        p2.maxHp = 3;
+        this.player.lives = Save.lives;
+        p2.lives = Save.lives;
       }
 
       for (const e of def.ents) {
@@ -333,6 +350,7 @@
       }
 
       this.buildProps();
+      if (!this.duel) this.placeLifePickups();
       this.amb = [];
       for (let i = 0; i < 26; i++) {
         this.amb.push({
@@ -626,6 +644,9 @@
       if (this.duel) {
         const mid = (this.players[0].cx + this.players[1].cx) / 2;
         targetX = U.clamp(mid - VW * 0.5, 0, maxX);
+      } else if (p.bubbled && p.bubble) {
+        // 人变泡泡了，镜头跟着泡泡，别让它飘出画面
+        targetX = U.clamp(p.bubble.x + 23 - VW * 0.45, 0, maxX);
       } else {
         targetX = U.clamp(p.cx - VW * 0.42 + p.facing * 46, 0, maxX);
       }
@@ -635,6 +656,88 @@
       const tr = this.cam.trauma * this.cam.trauma;
       this.cam.sx = (Math.random() - 0.5) * 34 * tr;
       this.cam.sy = (Math.random() - 0.5) * 26 * tr;
+    }
+
+    /* ---------------- 生命 / 死亡 / 复活 ---------------- */
+    gainLife(n) {
+      Save.lives = Math.min(LIVES_MAX, Math.max(0, Save.lives + n));
+      Save.save();
+      this.player.lives = Save.lives;
+      if (PH.Hub && PH.Hub.pushSave) PH.Hub.pushSave(Save.snapshot());
+    }
+
+    // 一个玩家倒下：扣一条命 → 变泡泡；命用完了就彻底出局
+    downPlayer(p) {
+      if (p.bubbled || p.eliminated) return;
+      p.lives = Math.max(0, (p.lives == null ? Save.lives : p.lives) - 1);
+      if (!this.duel) {
+        Save.lives = p.lives;
+        Save.save();
+        if (PH.Hub && PH.Hub.pushSave) PH.Hub.pushSave(Save.snapshot());
+      }
+      this.deaths++;
+      if (p.lives <= 0) {
+        p.eliminated = true;
+        p.hidden = true;
+        p.dead = true;
+        this.burst(p.cx, p.cy, 18, { color: '#C9BFA6', kind: 'paper' });
+        this.toast((this.duel ? p.tag + ' ' : '') + '生命用完了…');
+        this.checkAllDown();
+        return;
+      }
+      p.bubbled = true;
+      p.hidden = true;
+      p.dead = true;
+      p.vx = 0;
+      p.vy = 0;
+      const bub = new PH.Ent.Bubble(p, { alone: !this.duel });
+      p.bubble = bub;
+      this.entities.push(bub);
+      PH.Audio.sfx('pop');
+      this.toast(this.duel ? p.tag + ' 变成泡泡了，快去戳破' : '变成泡泡了');
+    }
+
+    // 泡泡没人救 → 回到存档点
+    respawnBubbledPlayer(p) {
+      const cp = this.checkpoint;
+      const sp = cp ? { x: cp.x, y: cp.y } : p.spawn || { x: this.def.start.x * T + 3, y: 0 };
+      p.reset(sp.x, sp.y);
+      p.hp = p.maxHp;
+      p.invuln = 1.8;
+      p.stun = 0.35;
+      p.bubbled = false;
+      p.hidden = false;
+      this.deathT = 0;
+      this.updateCamera(1, true);
+      this.toast(cp ? '回到存档点' : '回到起点');
+    }
+
+    // 多人都倒下了？
+    checkAllDown() {
+      const alive = this.players.filter((p) => !p.eliminated && !p.bubbled);
+      if (alive.length) return false;
+      const waiting = this.entities.some((e) => e.type === 'bubble' && !e.dead);
+      if (waiting) return false; // 还有泡泡在飘，等它破
+      this.failed = true;
+      return true;
+    }
+
+    // 本关还有几个人能继续
+    aliveCount() {
+      return this.players.filter((p) => !p.eliminated).length;
+    }
+
+    // 每关自动放两颗「加命」泡泡（在 32% / 68% 处的地面上）
+    placeLifePickups() {
+      [0.32, 0.68].forEach((f, i) => {
+        const tx = Math.max(3, Math.min(this.level.w - 3, Math.floor(this.level.w * f)));
+        for (let ty = 3; ty < this.level.h - 1; ty++) {
+          if (!this.solidAt(tx, ty)) continue;
+          if (this.solidAt(tx, ty - 1) || this.solidAt(tx, ty - 2)) break;
+          this.entities.push(new PH.Ent.LifePickup(tx * T, (ty - 1) * T));
+          return;
+        }
+      });
     }
 
     // 联机：把别人的位置插值过来，并把自己的位置按 20Hz 发出去
@@ -721,6 +824,7 @@
       for (const t of this.toasts) t.t += d;
       this.toasts = this.toasts.filter((t) => t.t < t.life);
 
+      for (const pl of this.players) if (pl.dead) pl.deadT += d;
       if (this.player.dead) this.deathT += d;
       this.updateAmb(d);
       this.updateDuelBounds(d);
@@ -1851,6 +1955,117 @@
     }, { size: 17 });
   }
 
+  /* ---------------- 生命耗尽 → 回到上一个 BOSS 之后 ---------------- */
+  function rollbackProgress() {
+    let lastBoss = -1;
+    PH.LEVEL_ORDER.forEach((id, i) => {
+      if (id.endsWith('B') && Save.cleared[id]) lastBoss = i;
+    });
+    const keep = {};
+    const keepBest = {};
+    PH.LEVEL_ORDER.slice(0, lastBoss + 1).forEach((id) => {
+      if (Save.cleared[id]) keep[id] = true;
+      if (Save.best && Save.best[id]) keepBest[id] = Save.best[id];
+    });
+    Save.cleared = keep;
+    Save.best = keepBest;
+    Save.unlocked = lastBoss < 0 ? 1 : Math.min(PH.LEVEL_ORDER.length, lastBoss + 2);
+    Save.lives = LIVES_BASE;
+    Save.save();
+    if (PH.Hub && PH.Hub.pushSave) PH.Hub.pushSave(Save.snapshot());
+    return lastBoss;
+  }
+
+  function failLevel() {
+    const w = G.world;
+    if (!w || w.failShown) return;
+    w.failShown = true;
+    if (w.duel) {
+      const low = Math.min.apply(null, w.players.map((p) => p.lives));
+      Save.lives = Math.max(0, low);
+      Save.save();
+    }
+    const before = Save.lives;
+    let rollbackTo = -1;
+    if (Save.lives <= 0) rollbackTo = rollbackProgress();
+    G.failInfo = {
+      id: G.levelId,
+      lives: Math.max(0, before),
+      deaths: w.deaths,
+      rollback: rollbackTo !== -2 && before <= 0,
+      bossId: rollbackTo >= 0 ? PH.LEVEL_ORDER[rollbackTo] : '',
+    };
+    PH.Audio.sfx('die');
+    G.failT = 0;
+    setState('levelFail');
+  }
+
+  /* ---------------- 场景：本关失败 ---------------- */
+  function drawLevelFail(dt) {
+    G.failT = (G.failT || 0) + dt;
+    const st = G.failInfo || { lives: 0, deaths: 0, rollback: false };
+    if (G.world) G.world.draw();
+    ctx.fillStyle = 'rgba(30,20,16,0.66)';
+    ctx.fillRect(0, 0, VW, VH);
+
+    const w = 520, h = 330, x = (VW - w) / 2, y = (VH - h) / 2;
+    PH.Paper.stackPanel(ctx, x, y, w, h, { fill: '#FCF6E6', fill2: '#EFE2C4', seed: 91, shadowAlpha: 0.58 });
+    PH.Paper.tape(ctx, x + 44, y + 2, 104, -0.2);
+
+    // 一只破掉的泡泡
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = '#9FC6D8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(VW / 2, y + 74, 28, 0.5, Math.PI * 1.5);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(VW / 2 + 6, y + 82, 4, 0, 7);
+    ctx.stroke();
+    ctx.restore();
+
+    PH.Paper.text(ctx, '本关失败', VW / 2, y + 96, {
+      size: 34,
+      align: 'center',
+      color: '#3A2A1E',
+      font: PH.Fonts.hand,
+      weight: '900',
+    });
+    PH.Paper.text(ctx, st.rollback ? '生命用完了' : '生命用完了，这关没能过去', VW / 2, y + 124, {
+      size: 14,
+      align: 'center',
+      color: 'rgba(90,70,50,.72)',
+    });
+
+    const rows = [
+      ['本关倒下', st.deaths + ' 次'],
+      ['剩余生命', st.rollback ? '0 → 重新补满 ' + LIVES_BASE : String(st.lives)],
+      ['进度', st.rollback ? (st.bossId ? '回到 ' + st.bossId + ' 之后' : '回到最初的第一关') : '存档点已清空，重跑本关'],
+    ];
+    rows.forEach((r, i) => {
+      PH.Paper.text(ctx, r[0], x + 84, y + 166 + i * 30, { size: 15, color: '#6B5136' });
+      PH.Paper.text(ctx, r[1], x + w - 84, y + 166 + i * 30, {
+        size: 15,
+        align: 'right',
+        color: i === 2 && st.rollback ? '#C8443A' : '#3A2A1E',
+        weight: '800',
+      });
+    });
+
+    G.buttons = [];
+    addBtn('failRetry', VW / 2 - 190, y + h - 68, 170, 48, st.rollback ? '重新开始' : '重跑本关', () => {
+      G.world = null;
+      G.mode = 'single';
+      startLevel(G.levelId);
+    }, { color: '#FFF3D0', size: 18 });
+    addBtn('failHome', VW / 2 + 20, y + h - 68, 170, 48, '回标题', () => {
+      G.world = null;
+      G.mode = 'single';
+      setState('title');
+    }, { color: '#F6EEDC', size: 17 });
+  }
+
   /* ---------------- 场景：联机结算 ---------------- */
   function drawOnlineClear(dt) {
     G.onlineT = (G.onlineT || 0) + dt;
@@ -2256,6 +2471,7 @@
     for (let i = 0; i < hearts; i++) PH.Paper.heart(ctx, 44 + i * 32, 38, 24, i < p.hp, '#E2574C');
     PH.Paper.coin(ctx, 202, 38, 10, w.time * 0.6);
     PH.Paper.text(ctx, '× ' + p.coins, 214, 45, { size: 17, color: '#4A3626', weight: '700' });
+    drawLifeChip(ctx, 262, 39, p.lives);
 
     // 中上：关卡 + 计时
     const cw = 258;
@@ -2350,6 +2566,29 @@
     });
   }
 
+  // 剩余生命：一颗小泡泡 + ×N
+  function drawLifeChip(ctx, x, y, n) {
+    ctx.save();
+    const grad = ctx.createRadialGradient(x - 3, y - 4, 1, x, y, 12);
+    grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+    grad.addColorStop(0.6, 'rgba(200,235,248,0.75)');
+    grad.addColorStop(1, 'rgba(150,205,228,0.55)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, 12, 0, 7);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.restore();
+    PH.Paper.text(ctx, '× ' + n, x + 18, y + 6, {
+      size: 17,
+      color: n <= 1 ? '#C8443A' : '#3A2A1E',
+      weight: '800',
+      font: PH.Fonts.mono,
+    });
+  }
+
   function drawHUD(dt) {
     const w = G.world;
     const p = w.player;
@@ -2365,13 +2604,14 @@
     }
     ctx.save();
 
-    // 左：生命 + 金币
-    PH.Paper.panel(ctx, 14, 12, 248, 56, { fill: '#FCF6E6', fill2: '#EDE0C4', seed: 3, shadowAlpha: 0.28, blur: 10 });
+    // 左：生命 + 剩余条数 + 金币
+    PH.Paper.panel(ctx, 14, 12, 306, 56, { fill: '#FCF6E6', fill2: '#EDE0C4', seed: 3, shadowAlpha: 0.28, blur: 10 });
     for (let i = 0; i < Math.min(p.maxHp, 8); i++) {
-      PH.Paper.heart(ctx, 46 + i * 34, 40, 26, i < p.hp, '#E2574C');
+      PH.Paper.heart(ctx, 44 + i * 32, 40, 24, i < p.hp, '#E2574C');
     }
-    PH.Paper.coin(ctx, 172, 40, 11, w.time * 0.6);
-    PH.Paper.text(ctx, '× ' + p.coins, 188, 47, { size: 20, color: '#4A3626', weight: '700' });
+    drawLifeChip(ctx, 148, 40, p.lives);
+    PH.Paper.coin(ctx, 236, 40, 11, w.time * 0.6);
+    PH.Paper.text(ctx, '× ' + p.coins, 252, 47, { size: 20, color: '#4A3626', weight: '700' });
 
     // 中：关卡名 + 时间
     const def = w.def;
@@ -2629,19 +2869,12 @@
       } else setState('clear');
       return;
     }
-    if (w.player.dead && w.deathT > 1.5) {
-      if (w.online) {
-        // 联机：死了不淘汰，回到最近的安全落脚点，血补满
-        const sp = w.player.lastSafe || w.player.spawn;
-        w.player.reset(sp.x, sp.y);
-        w.player.hp = w.player.maxHp;
-        w.player.invuln = 1.8;
-        w.player.stun = 0.4;
-        w.deathT = 0;
-        w.toast('摔了一次 · 继续跑');
-        return;
-      }
-      setState('gameover');
+    // 倒下 0.9 秒后：扣命 → 变泡泡，或者直接出局
+    for (const pl of w.players) {
+      if (pl.dead && !pl.bubbled && !pl.eliminated && pl.deadT > 0.9) w.downPlayer(pl);
+    }
+    if (w.failed) {
+      failLevel();
       return;
     }
   }
@@ -2964,6 +3197,9 @@
       p1: w.players[0].tag,
       p2: w.players[1].tag,
     };
+    const lowLives = Math.min.apply(null, w.players.map((p) => p.lives));
+    Save.lives = Math.max(0, lowLives);
+    Save.save();
     G.duelT = 0;
     PH.Audio.sfx('clear');
     setState('duelClear');
@@ -3215,6 +3451,9 @@
         break;
       case 'onlineClear':
         drawOnlineClear(dt);
+        break;
+      case 'levelFail':
+        drawLevelFail(dt);
         break;
       case 'help':
         G.titleT += dt;

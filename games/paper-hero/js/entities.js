@@ -157,6 +157,11 @@
       this.duel = false;
       this.stun = 0;
       this.lastSafe = null;
+      // 死亡 → 泡泡：bolbbub = 正在泡泡里，hidden 时不画本体
+      this.bubbled = false;
+      this.hidden = false;
+      this.eliminated = false;
+      this.lives = 5;
     }
 
     get cx() {
@@ -181,17 +186,9 @@
 
     hurt(n, g, srcX) {
       if (this.invuln > 0 || this.dead) return false;
-      // 双人竞速：不掉血，只被弹开 + 短暂眩晕
+      // 双人竞速也会掉血：死了变泡泡，队友能戳破救回来
       if (g && g.duel) {
         this.vx = (srcX !== undefined && srcX > this.cx ? -1 : 1) * 260;
-        this.vy = -330;
-        this.invuln = 1.1;
-        this.stun = 0.42;
-        this.hurtT = 0.4;
-        PH.Audio.sfx('hurt');
-        g.shake(6, 0.2);
-        g.burst(this.cx, this.y + this.h / 2, 10, { color: '#E2574C', kind: 'paper' });
-        return true;
       }
       if (this.shield > 0) {
         this.shield = 0;
@@ -430,6 +427,7 @@
     }
 
     draw(ctx, g) {
+      if (this.hidden) return;
       const bob = this.pose === 'run' ? Math.sin(this.animT * 15) * 2.2 : Math.sin(this.animT * 2.4) * 1.2;
       let h = this.grown ? 100 : 86;
       if (this.mount > 0) h = 78;
@@ -1138,6 +1136,180 @@
   }
 
   // 回血心：小的心补 1 心，大的（金色）补满
+  /* ---------------- 死亡泡泡 ---------------- */
+  // 玩家倒下后变成一颗纸泡泡，队友碰一下就能把人救出来；
+  // 没人救就自己飘一会儿破掉，回到存档点复活。
+  class Bubble {
+    constructor(player, opts) {
+      opts = opts || {};
+      this.type = 'bubble';
+      this.player = player;
+      this.w = 46;
+      this.h = 46;
+      this.x = player.cx - 23;
+      this.y = player.y + player.h * 0.3;
+      this.baseY = this.y;
+      this.t = 0;
+      this.dead = false;
+      this.rescued = false;
+      this.alone = !!opts.alone; // 单人：只能自己破
+      this.wait = this.alone ? 3.0 : 7.0;
+      this.mini = 0.5;
+    }
+
+    update(dt, g) {
+      this.t += dt;
+      // 慢慢飘到半空再上下浮
+      const target = this.baseY - 34;
+      this.y = U.lerp(this.y, target, Math.min(1, dt * 2.2)) + Math.sin(this.t * 2.6) * 0.6;
+      // 队友碰一下 = 救出
+      if (!this.rescued) {
+        for (const pl of g.players || []) {
+          if (pl === this.player || pl.dead || pl.eliminated) continue;
+          if (U.hit(this, { x: pl.x - 10, y: pl.y - 10, w: pl.w + 20, h: pl.h + 20 })) {
+            this.pop(g, true);
+            return;
+          }
+        }
+      }
+      if (this.alone && this.t > 1.2 && g.player && !g.player.dead) {
+        // 单人：等一小会儿自动破，不用干等
+        if (this.t > this.wait) this.pop(g, false);
+      } else if (this.t > this.wait) {
+        this.pop(g, false);
+      }
+    }
+
+    pop(g, rescued) {
+      if (this.dead) return;
+      this.dead = true;
+      this.rescued = rescued;
+      g.burst(this.x + this.w / 2, this.y + this.h / 2, rescued ? 16 : 10, {
+        color: rescued ? '#BFE9FF' : '#DCEBF2',
+        kind: 'spark',
+        life: 0.5,
+      });
+      PH.Audio.sfx(rescued ? 'heal' : 'pop');
+      const p = this.player;
+      if (rescued) {
+        // 原地救出，给两格血，短暂无敌
+        p.reset(this.x + this.w / 2 - p.w / 2, this.y + this.h - p.h);
+        p.hp = Math.min(p.maxHp, 2);
+        p.invuln = 1.6;
+        p.bubbled = false;
+        p.hidden = false;
+        g.toast('救出来了！');
+      } else {
+        g.respawnBubbledPlayer(p);
+      }
+    }
+
+    draw(ctx, g) {
+      const cx = this.x + this.w / 2;
+      const cy = this.y + this.h / 2;
+      const r = this.w / 2 + Math.sin(this.t * 3) * 1.2;
+      const left = this.wait - this.t;
+      ctx.save();
+      // 泡泡本体
+      const grad = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.15, cx, cy, r);
+      grad.addColorStop(0, 'rgba(255,255,255,0.72)');
+      grad.addColorStop(0.55, 'rgba(214,240,250,0.34)');
+      grad.addColorStop(1, 'rgba(160,210,230,0.22)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 7);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // 高光
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.ellipse(cx - r * 0.34, cy - r * 0.4, r * 0.22, r * 0.14, -0.6, 0, 7);
+      ctx.fill();
+      ctx.restore();
+      // 里面的人
+      const spr = this.player.spr || 'hero';
+      const s = PH.Assets.sizeForH(spr, 34);
+      PH.Assets.draw(ctx, spr, cx - s.w / 2, cy - s.h / 2 + 4, s.w, s.h, { alpha: 0.92, flip: this.player.facing < 0 });
+      // 倒计时小弧
+      if (left > 0 && left < this.wait) {
+        ctx.save();
+        ctx.strokeStyle = this.alone ? 'rgba(200,68,58,0.5)' : 'rgba(47,127,196,0.55)';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r + 5, -Math.PI / 2, -Math.PI / 2 + (left / this.wait) * Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      PH.Paper.text(ctx, this.alone ? '快戳破' : '来救我', cx, this.y - 10, {
+        size: 11,
+        align: 'center',
+        color: '#3A2A1E',
+        weight: '800',
+        outline: 'rgba(255,248,232,0.9)',
+        outlineW: 3,
+      });
+    }
+  }
+
+  /* ---------------- 加命道具 ---------------- */
+  class LifePickup {
+    constructor(x, y) {
+      this.w = 30;
+      this.h = 30;
+      this.x = x + (32 - this.w) / 2;
+      this.y = y + (32 - this.h) / 2;
+      this.t = U.rnd(0, 6);
+      this.dead = false;
+      this.type = 'life';
+    }
+    update(dt, g) {
+      this.t += dt;
+      const p = g.player;
+      if (!p || p.dead || p.eliminated) return;
+      if (U.hit(this, { x: p.x - 8, y: p.y - 8, w: p.w + 16, h: p.h + 16 })) {
+        this.dead = true;
+        g.gainLife(1);
+        g.burst(this.x + 15, this.y + 15, 16, { color: '#9FE6F5', kind: 'spark' });
+        g.burst(this.x + 15, this.y + 15, 8, { color: '#F0798C', kind: 'star' });
+        g.toast('多一条命');
+      }
+    }
+    draw(ctx) {
+      const cx = this.x + this.w / 2;
+      const cy = this.y + this.h / 2 + Math.sin(this.t * 2.6) * 3;
+      const r = 16 + Math.sin(this.t * 3.4) * 1.2;
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = '#2A1A12';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 26, 12, 4, 0, 0, 7);
+      ctx.fill();
+      ctx.restore();
+      ctx.save();
+      const grad = ctx.createRadialGradient(cx - r * 0.4, cy - r * 0.45, 2, cx, cy, r);
+      grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+      grad.addColorStop(0.6, 'rgba(206,238,250,0.5)');
+      grad.addColorStop(1, 'rgba(150,205,228,0.32)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 7);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.ellipse(cx - r * 0.34, cy - r * 0.4, 4, 2.6, -0.6, 0, 7);
+      ctx.fill();
+      ctx.restore();
+      PH.Paper.heart(ctx, cx, cy + 8, 18, true, '#E2574C');
+    }
+  }
+
   class HeartPickup {
     constructor(x, y, big) {
       this.big = !!big;
@@ -1427,6 +1599,8 @@
     Coin,
     ItemPickup,
     HeartPickup,
+    LifePickup,
+    Bubble,
     Checkpoint,
     GoalFlag,
     MovingPlatform,
