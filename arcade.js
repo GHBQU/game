@@ -19,7 +19,13 @@
 (function () {
   'use strict';
 
-  var INVITE = '#include<bits/stdc++.h>';
+  /* 邀请码不在源码里存明文，只存摘要 —— 翻源码读不出原文。
+     校验方式：sha256('arcade-invite-v1|' + 去掉空白后的输入) 与下面任一条相等即通过。
+     第二条是无 crypto.subtle（非 https / 老浏览器）时的兜底摘要。 */
+  var INVITE_DIGESTS = [
+    '1248225cb05b01163d46216ba6eb7b739feb52de74859fbfaf2a80e8309042c8',
+    '65cb9a1a7eff733b'
+  ];
   var K_ACC = 'arcade.accounts.v1';
   var K_SES = 'arcade.session.v1';
 
@@ -41,7 +47,11 @@
 
   /* ---------------- 邀请码 ---------------- */
   function normalizeInvite(s) { return String(s == null ? '' : s).replace(/\s+/g, ''); }
-  function inviteOk(s) { return normalizeInvite(s) === INVITE; }
+  function inviteOk(s) {
+    return hashRaw('arcade-invite-v1|' + normalizeInvite(s)).then(function (d) {
+      return INVITE_DIGESTS.indexOf(d) >= 0;
+    });
+  }
 
   /* ---------------- 口令哈希 ---------------- */
   function fnv(str) {
@@ -54,19 +64,21 @@
     }
     return ('00000000' + h1.toString(16)).slice(-8) + ('00000000' + h2.toString(16)).slice(-8);
   }
-  function hashPassword(pw, salt) {
-    var s = salt + '|' + pw + '|arcade-v1';
+  function hashRaw(str) {
     if (window.crypto && crypto.subtle && crypto.subtle.digest) {
       try {
-        var bytes = new TextEncoder().encode(s);
+        var bytes = new TextEncoder().encode(str);
         return crypto.subtle.digest('SHA-256', bytes).then(function (buf) {
           return Array.prototype.map.call(new Uint8Array(buf), function (b) {
             return pad2(b.toString(16));
           }).join('');
-        }).catch(function () { return fnv(s); });
+        }).catch(function () { return fnv(str); });
       } catch (e) { /* 落到下面 */ }
     }
-    return Promise.resolve(fnv(s));
+    return Promise.resolve(fnv(str));
+  }
+  function hashPassword(pw, salt) {
+    return hashRaw(salt + '|' + pw + '|arcade-v1');
   }
   function makeSalt() {
     var s = '';
@@ -111,24 +123,26 @@
     var accs = allAccounts();
     if (accs[key]) return Promise.resolve({ ok: false, code: 'dup', msg: '这个账号名已经被注册了' });
 
-    var salt = makeSalt();
-    return hashPassword(p, salt).then(function (hash) {
-      accs[key] = {
-        name: n,
-        salt: salt,
-        hash: hash,
-        invited: inviteOk(invite),
-        createdAt: Date.now()
-      };
-      if (!write(K_ACC, accs)) {
-        return { ok: false, code: 'storage', msg: '浏览器存储不可用，注册失败' };
-      }
-      write(K_SES, { name: n, at: Date.now() });
-      return {
-        ok: true,
-        code: inviteOk(invite) ? 'ok' : 'need-invite',
-        msg: inviteOk(invite) ? '注册成功' : '注册成功，但还需要邀请码才能开始游戏'
-      };
+    return inviteOk(invite).then(function (invited) {
+      var salt = makeSalt();
+      return hashPassword(p, salt).then(function (hash) {
+        accs[key] = {
+          name: n,
+          salt: salt,
+          hash: hash,
+          invited: invited,
+          createdAt: Date.now()
+        };
+        if (!write(K_ACC, accs)) {
+          return { ok: false, code: 'storage', msg: '浏览器存储不可用，注册失败' };
+        }
+        write(K_SES, { name: n, at: Date.now() });
+        return {
+          ok: true,
+          code: invited ? 'ok' : 'need-invite',
+          msg: invited ? '注册成功' : '注册成功，但还需要邀请码才能开始游戏'
+        };
+      });
     });
   }
 
@@ -150,14 +164,16 @@
 
   function activateInvite(code) {
     var user = current();
-    if (!user) return { ok: false, msg: '请先登录' };
-    if (!inviteOk(code)) return { ok: false, msg: '邀请码不对' };
-    var accs = allAccounts();
-    var key = user.name.toLowerCase();
-    if (!accs[key]) return { ok: false, msg: '账号不存在' };
-    accs[key].invited = true;
-    write(K_ACC, accs);
-    return { ok: true, msg: '邀请码已激活' };
+    if (!user) return Promise.resolve({ ok: false, msg: '请先登录' });
+    return inviteOk(code).then(function (good) {
+      if (!good) return { ok: false, msg: '邀请码不对' };
+      var accs = allAccounts();
+      var key = user.name.toLowerCase();
+      if (!accs[key]) return { ok: false, msg: '账号不存在' };
+      accs[key].invited = true;
+      write(K_ACC, accs);
+      return { ok: true, msg: '邀请码已激活' };
+    });
   }
 
   function logout() {
@@ -320,7 +336,6 @@
 
   /* ---------------- 对外 ---------------- */
   window.Arcade = {
-    INVITE: INVITE,
     inviteOk: inviteOk,
     current: current,
     register: register,

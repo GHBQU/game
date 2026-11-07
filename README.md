@@ -51,11 +51,21 @@
 
 ### 邀请码
 
-```
-#include<bits/stdc++.h>
+邀请码**不在源码里存明文**，`arcade.js` 顶部只有摘要表 `INVITE_DIGESTS`：
+
+- 校验：先把输入去掉所有空白字符，再算 `sha256('arcade-invite-v1|' + 输入)`，与摘要表比对。
+- 表里第二条是无 `crypto.subtle`（非 https / 老浏览器）时的兜底算法摘要。
+- 界面上的输入框只有一个「请输入邀请码」占位符，不透露任何格式线索。
+
+换邀请码：算出新摘要替换掉表里对应那条。
+
+```js
+// 在浏览器控制台里算（需 https 或 localhost）
+crypto.subtle.digest('SHA-256', new TextEncoder().encode('arcade-invite-v1|' + 新邀请码))
+  .then(b => console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('')));
 ```
 
-校验时会先去掉所有空白字符再比对，所以 `#include <bits/stdc++.h>` 也能通过。改邀请码改 `arcade.js` 顶部的 `INVITE` 常量。
+> 摘要只能挡住「翻源码直接抄」。真要防住猜码，必须把校验放到服务端 —— 纯静态站点做不到。
 
 ### 防沉迷时间窗
 

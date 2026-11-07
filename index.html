@@ -1199,8 +1199,9 @@ html[data-style="glass"] .accountbar .ab-btn:hover{background:#fff;color:var(--u
   display:flex;flex-direction:column;gap:5px;
   font-size:11.5px;font-weight:600;letter-spacing:.04em;color:var(--ui-mut);
 }
+.gate-form label .lab{display:flex;align-items:baseline;gap:5px}
 .gate-form label .opt{
-  font-weight:400;letter-spacing:0;color:var(--ui-mut);opacity:.7;margin-left:4px;
+  font-weight:400;letter-spacing:0;color:var(--ui-mut);opacity:.7;
 }
 .gate-form input{
   width:100%;appearance:none;font-family:inherit;font-size:13.5px;font-weight:400;
@@ -1470,7 +1471,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <form class="gate-form" id="f-reg" autocomplete="on" hidden>
         <label>账号名<input name="name" autocomplete="username" maxlength="20" required></label>
         <label>密码<input name="pw" type="password" autocomplete="new-password" maxlength="64" required></label>
-        <label>邀请码<span class="opt">可选</span><input name="invite" placeholder="#include&lt;bits/stdc++.h&gt;" spellcheck="false" autocapitalize="off"></label>
+        <label><span class="lab">邀请码<span class="opt">可选</span></span><input name="invite" placeholder="请输入邀请码" spellcheck="false" autocapitalize="off"></label>
         <p class="gate-tip">不填邀请码也能注册，但只有填了邀请码才能开始游戏。</p>
         <p class="gate-msg" data-msg></p>
         <button type="submit" class="gate-submit">注册</button>
@@ -1482,7 +1483,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <h2>还差一个邀请码</h2>
       <p class="gate-sub" id="invite-hello">账号已创建，但还没有激活游玩权限。</p>
       <form class="gate-form" id="f-invite">
-        <label>邀请码<input name="invite" placeholder="#include&lt;bits/stdc++.h&gt;" spellcheck="false" autocapitalize="off" required></label>
+        <label>邀请码<input name="invite" placeholder="请输入邀请码" spellcheck="false" autocapitalize="off" required></label>
         <p class="gate-msg" data-msg></p>
         <button type="submit" class="gate-submit">激活</button>
       </form>
@@ -1741,11 +1742,12 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   fInvite.addEventListener('submit', function(e){
     e.preventDefault();
     var d = new FormData(fInvite);
-    var r = Arcade.activateInvite(d.get('invite'));
-    if (!r.ok){ setMsg(fInvite, r.msg); return; }
-    refresh();
-    var st = Arcade.status();
-    if (st.ok) closeGate(); else openGate('time');
+    Arcade.activateInvite(d.get('invite')).then(function(r){
+      if (!r.ok){ setMsg(fInvite, r.msg); return; }
+      refresh();
+      var st = Arcade.status();
+      if (st.ok) closeGate(); else openGate('time');
+    });
   });
 
   /* 点游戏条目时拦截 */
