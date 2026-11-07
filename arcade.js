@@ -29,6 +29,49 @@
   var K_ACC = 'arcade.accounts.v1';
   var K_SES = 'arcade.session.v1';
 
+  /* 后端模式，由页面里的 <meta name="arcade-api"> 决定：
+       local        账号存本机 localStorage（GitHub Pages 用这个）
+       same-origin  调同源的 /api/*（板子自己发整站时用这个）
+       http(s)://…  调指定地址的 /api/*（板子挂在隧道后面时用这个）
+     ESP32 的静态服务在返回 index.html 时会把这里的值改写掉。 */
+  var API_MODE = (function () {
+    var m = document.querySelector('meta[name="arcade-api"]');
+    var v = m ? String(m.getAttribute('content') || '').trim() : '';
+    /* 游戏页没有被服务端改写 meta，但和主页同源，复用主页解析出的结果 */
+    if (!v) {
+      try { v = localStorage.getItem('arcade.api-mode') || ''; } catch (e) {}
+    }
+    v = v || 'local';
+    try { localStorage.setItem('arcade.api-mode', v); } catch (e) {}
+    return v;
+  })();
+
+  function apiUrl(path) {
+    if (API_MODE === 'same-origin') return '/api' + path;
+    return API_MODE.replace(/\/+$/, '') + '/api' + path;
+  }
+
+  function apiFetch(path, body, timeoutMs) {
+    var opts = { method: body === undefined ? 'GET' : 'POST', headers: {} };
+    if (body !== undefined) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    var ctrl = null;
+    if (window.AbortController) {
+      ctrl = new AbortController();
+      opts.signal = ctrl.signal;
+      setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, timeoutMs || 6000);
+    }
+    return fetch(apiUrl(path), opts).then(function (r) {
+      return r.json().catch(function () { return { ok: false, msg: '后端返回了无法解析的内容' }; });
+    }).catch(function () {
+      return { ok: false, code: 'offline', msg: '连不上账号服务，请确认板子开着' };
+    });
+  }
+
+  function useApi() { return API_MODE !== 'local'; }
+
   var DAY = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
   /* ---------------- 存储 ---------------- */
@@ -98,9 +141,26 @@
   function current() {
     var ses = read(K_SES, null);
     if (!ses || !ses.name) return null;
+    if (useApi()) {
+      return { name: ses.name, invited: !!ses.invited, token: ses.token || null, remote: true };
+    }
     var acc = allAccounts()[String(ses.name).toLowerCase()];
     if (!acc) return null;
     return { name: acc.name, invited: !!acc.invited, createdAt: acc.createdAt };
+  }
+
+  /* 向板子核对一次会话，刷新本地缓存里的 invited */
+  function syncSession() {
+    if (!useApi()) return Promise.resolve(current());
+    var ses = read(K_SES, null);
+    if (!ses || !ses.token) return Promise.resolve(null);
+    return apiFetch('/me?token=' + encodeURIComponent(ses.token)).then(function (r) {
+      if (!r.ok) { try { localStorage.removeItem(K_SES); } catch (e) {} return null; }
+      ses.name = r.name;
+      ses.invited = !!r.invited;
+      write(K_SES, ses);
+      return current();
+    });
   }
 
   function validateName(name) {
@@ -112,6 +172,13 @@
   }
 
   function register(name, pw, invite) {
+    if (useApi()) {
+      return apiFetch('/register', { name: name, password: pw, invite: invite }).then(function (r) {
+        if (r.ok) write(K_SES, { name: r.name, invited: !!r.invited, token: r.token, at: Date.now() });
+        return r;
+      });
+    }
+
     var n = String(name || '').trim();
     var p = String(pw || '');
     var bad = validateName(n);
@@ -147,6 +214,13 @@
   }
 
   function login(name, pw) {
+    if (useApi()) {
+      return apiFetch('/login', { name: name, password: pw }).then(function (r) {
+        if (r.ok) write(K_SES, { name: r.name, invited: !!r.invited, token: r.token, at: Date.now() });
+        return r;
+      });
+    }
+
     var n = String(name || '').trim();
     var p = String(pw || '');
     var acc = allAccounts()[n.toLowerCase()];
@@ -163,6 +237,15 @@
   }
 
   function activateInvite(code) {
+    if (useApi()) {
+      var ses = read(K_SES, null);
+      if (!ses || !ses.token) return Promise.resolve({ ok: false, code: 'auth', msg: '登录已失效，请重新登录' });
+      return apiFetch('/invite', { token: ses.token, invite: code }).then(function (r) {
+        if (r.ok) { ses.invited = true; write(K_SES, ses); }
+        return r;
+      });
+    }
+
     var user = current();
     if (!user) return Promise.resolve({ ok: false, msg: '请先登录' });
     return inviteOk(code).then(function (good) {
@@ -177,6 +260,10 @@
   }
 
   function logout() {
+    var ses = read(K_SES, null);
+    if (useApi() && ses && ses.token) {
+      try { apiFetch('/logout', { token: ses.token }); } catch (e) {}
+    }
     try { localStorage.removeItem(K_SES); } catch (e) {}
   }
 
@@ -336,8 +423,10 @@
 
   /* ---------------- 对外 ---------------- */
   window.Arcade = {
+    apiMode: API_MODE,
     inviteOk: inviteOk,
     current: current,
+    syncSession: syncSession,
     register: register,
     login: login,
     activateInvite: activateInvite,

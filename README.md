@@ -27,6 +27,13 @@
 ├── holidays.js                   # 法定节假日 / 调休上班日 / 寒暑假数据
 ├── CNAME                         # 自定义域名 小宇.gay
 ├── .nojekyll                     # 关闭 Jekyll 处理
+├── esp32/                        # 用 ESP32 自己当服务器（见 esp32/README.md）
+│   ├── main.py                   #   WiFi + HTTP 服务 + 静态文件
+│   ├── arcade_core.py            #   账号逻辑（MicroPython / CPython 通用）
+│   └── README.md
+├── tools/
+│   ├── board-sim.py              # 板子模拟器（PC 上跑，路由与板子一致）
+│   └── mock-server.py            # 纯接口模拟（不含静态文件）
 └── games/
     ├── ip-please/                # IP, PLEASE（MIT，镜像自 ctnyanya）
     │   ├── index.html
@@ -36,6 +43,17 @@
     └── night-survivors/
         └── index.html            # 暗夜幸存者（单文件 85 KB）
 ```
+
+## 两种跑法
+
+| | 账号存哪 | 谁提供页面 | 需要常开什么 |
+|---|---|---|---|
+| **GitHub Pages**（小宇.gay） | 访客自己的浏览器 | GitHub | 无 |
+| **自己的 ESP32** | 板子 flash | 板子 | 只要板子 + 路由器 |
+
+同一份 `index.html` 两边通用：`<meta name="arcade-api" content="local">` 决定走哪种。ESP32 发站时会把它改写成 `same-origin`，前端自动改调 `/api/*`。详见 [esp32/README.md](esp32/README.md)。
+
+> ESP32 方案只能局域网访问。想让公网访客用，必须有公网 IP + 端口映射，或一台常开的设备做隧道 —— 板子自己跑不了 cloudflared/ngrok 这类 Go 二进制。
 
 ## 账号与门禁
 

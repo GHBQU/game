@@ -1,0 +1,6 @@
+# 模拟器的本地数据，不进仓库
+tools/.data/
+tools/.board-data/
+__pycache__/
+*.pyc
+.DS_Store

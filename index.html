@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#ffffff">
+<!-- 账号后端：local = 存本机浏览器；ESP32 发站时会把它改写成 same-origin -->
+<meta name="arcade-api" content="local">
 <title>游戏厅 · 小宇.GAY</title>
 <meta name="description" content="两个纯静态网页游戏：IP, PLEASE（像素剧情）与 暗夜幸存者（生存射击）。打开就能玩，不登录、不下载、不追踪。">
 <meta property="og:type" content="website">
@@ -1766,6 +1768,10 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   if (locked) openGate(locked);
 
   refresh();
+  /* 接了板子的话，先跟后端核对一次会话，再刷新状态 */
+  if (Arcade.syncSession) {
+    Arcade.syncSession().then(function(){ refresh(); });
+  }
   setInterval(refresh, 15000);
   document.addEventListener('visibilitychange', function(){
     if (!document.hidden) refresh();
