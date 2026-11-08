@@ -12,8 +12,8 @@
  *    同时读同目录 endpoint.json 兜底；逐个 /health 探活，挑最快且健康的那个。
  * 2. 公网页面会自动定时重试：朋友可以先把页面开着，服务器一开机就自己连上，不用刷新；
  *    隧道换地址后也会自动跟到新地址。?server= 可强制指定（邀请链接用它，失效时自动回退）。
- * 3. 账号：服务在线时存在房主电脑的 data/accounts.json，兼容游戏厅（../../arcade.js）账号；
- *    服务没开就退回本机浏览器凭据 + 离线密钥，单机照常玩。
+ * 3. 账号：服务在线时存在 Cloudflare Durable Object（本机 net_server 是兜底），
+ *    兼容游戏厅（../../arcade.js）账号；服务没开就退回本机浏览器凭据 + 离线密钥。
  */
 (function (PH) {
   const K_SERVER = 'paperhero.server'; // 手动/邀请指定的服务器地址
@@ -254,7 +254,7 @@
         this.endpoint = '';
         this.serverId = '';
         this.rtt = 0;
-        this.lastError = '本机服务没开，联机关掉；账号改用离线密钥验证';
+        this.lastError = 'Cloudflare / 本机服务都没连上，联机关掉；账号改用离线密钥验证';
         this.loadAccount();
         this.emit('change');
         return false;

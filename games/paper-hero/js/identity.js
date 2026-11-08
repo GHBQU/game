@@ -1,12 +1,13 @@
 /* 纸片勇者 — 账号桥接：和游戏厅主页共用账号
  *
  * 规则（按需求）：
- *   1. 游戏里不注册。账号优先来自本机服务器 data/accounts.json，
- *      其次是游戏厅主页（arcade.js）；档案按账号名共用。
- *   2. 服务在线：用户名 + 加盐摘要存在房主这台电脑上，手机 / 平板 / 别的电脑
+ *   1. 游戏里不注册。账号优先来自 Cloudflare Durable Object，
+ *      其次是本机兜底服务 data/accounts.json、游戏厅主页（arcade.js）；
+ *      档案按账号名共用。
+ *   2. 服务在线：用户名 + 加盐摘要存在 Cloudflare，手机 / 平板 / 别的电脑
  *      都能用同一个账号登录；登录成功后本机再镜像一份，供离线兜底。
  *      只存摘要，不存明文密码。
- *   3. 本机服务不在线时，不走服务器验证，改用密钥验证：
+ *   3. 所有服务器都不在线时，不走服务器验证，改用密钥验证：
  *      #include<bits/stdc++.h>
  *      验证通过后才能用本机保存的账号进入；不验证也能照常单机玩。
  */
@@ -185,6 +186,10 @@
     serverKey() {
       return (PH.Hub && PH.Hub.serverId) || '';
     },
+    serverLabel() {
+      const ep = (PH.Hub && PH.Hub.endpoint) || '';
+      return /workers\.dev\/?$/i.test(ep) ? 'Cloudflare' : '本机服务器';
+    },
     setServerSession(name) {
       set(K_SSES, { name: String(name || '').trim(), sid: this.serverKey(), at: Date.now() });
       del(K_SES);
@@ -194,7 +199,7 @@
 
     async serverJson(path, body) {
       const base = this.serverBase();
-      if (!base) return { ok: false, msg: '本机服务不在线' };
+      if (!base) return { ok: false, msg: '服务器不在线' };
       const opt = { cache: 'no-store' };
       if (body) {
         opt.method = 'POST';
@@ -206,7 +211,7 @@
         const j = await r.json();
         return j && typeof j === 'object' ? j : { ok: false, msg: '服务器没有回应' };
       } catch (e) {
-        return { ok: false, msg: '连不上本机服务器' };
+        return { ok: false, msg: '连不上服务器' };
       }
     },
 
@@ -319,8 +324,8 @@
 
     async serverLogin(name, pw) {
       const info = await this.serverAccount(name);
-      if (!info.ok) return { ok: false, msg: info.msg || '连不上本机服务器' };
-      if (!info.exists) return { ok: false, code: 'no_account', msg: '本机服务器上还没有这个账号' };
+      if (!info.ok) return { ok: false, msg: info.msg || '连不上服务器' };
+      if (!info.exists) return { ok: false, code: 'no_account', msg: this.serverLabel() + ' 上还没有这个账号' };
       const canonical = info.name || name;
       const hash = await pwHash(String(pw), info.salt);
       const r = await this.serverJson('/api/account/login', { name: canonical, hash });
@@ -328,7 +333,7 @@
       this.rememberHash(canonical, info.salt, hash, 'server');
       this.setServerSession(canonical);
       this.bind();
-      return { ok: true, name: canonical, msg: '本机服务器验证通过' };
+      return { ok: true, name: canonical, msg: this.serverLabel() + ' 验证通过' };
     },
 
     async importToServer(name, pw, allowLocal) {
@@ -350,22 +355,22 @@
         }
       }
       if (!ok || !cred) {
-        return { ok: false, msg: '本机服务器上还没有这个账号；请先在房主电脑登录一次' };
+        return { ok: false, msg: this.serverLabel() + ' 上还没有这个账号；请先在房主电脑登录一次' };
       }
       const r = await this.serverJson('/api/account/import', {
         name: cred.name,
         salt: cred.salt,
         hash: cred.hash,
       });
-      if (!r.ok) return { ok: false, msg: r.msg || '账号存不到本机服务器' };
+      if (!r.ok) return { ok: false, msg: r.msg || '账号存不到服务器' };
       if (r.created === false && r.same !== true) {
-        return { ok: false, msg: '本机服务器上已有同名账号，但密码不一致' };
+        return { ok: false, msg: this.serverLabel() + ' 上已有同名账号，但密码不一致' };
       }
       this.rememberHash(cred.name, cred.salt, cred.hash, 'server');
       this.setServerSession(cred.name);
       this.bind();
       this.refreshServerAccounts();
-      return { ok: true, name: cred.name, msg: '账号已保存到本机服务器' };
+      return { ok: true, name: cred.name, msg: '账号已保存到 ' + this.serverLabel() };
     },
 
     async syncArcadeSession(name, pw) {
@@ -379,7 +384,7 @@
     },
 
     async loginArcade(name, pw) {
-      if (!this.hasArcade()) return { ok: false, msg: '本机服务不在线；请先用离线密钥，再登录本机保存的账号' };
+      if (!this.hasArcade()) return { ok: false, msg: '服务器不在线；请先用离线密钥，再登录本机保存的账号' };
       let r;
       try {
         r = await window.Arcade.login(name, pw);
