@@ -2539,6 +2539,13 @@
         PH.leaveOnlineRace(false);
       }, { size: 17 });
     }
+    PH.Paper.text(
+      ctx,
+      lost ? (PH.Net.isHost() ? '点「再来一局」所有人一起重跑' : '等房主点「再来一局」') : '回到房间等下一轮',
+      VW / 2,
+      by - 18,
+      { size: 12, align: 'center', color: 'rgba(90,70,50,.5)' }
+    );
   }
 
   function drawOnlineFail(dt) {
