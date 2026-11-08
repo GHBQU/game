@@ -692,6 +692,7 @@
       p.hp = 0;
       p.dead = true;
       p.deadT = 0;
+      if (p.markDeath) p.markDeath();
       p.vx = 0;
       p.vy = -260;
       p.invuln = 0;
@@ -733,6 +734,7 @@
     // 一个玩家倒下：扣一条命 → 多人变泡泡 / 单人直接回存档点；命用完了就彻底出局
     downPlayer(p) {
       if (p.bubbled || p.eliminated) return;
+      p.deadFloat = false;
       p.lives = Math.max(0, (p.lives == null ? Save.lives : p.lives) - 1);
       if (!this.duel) {
         Save.lives = p.lives;
@@ -765,7 +767,7 @@
       }
       p.bubbled = true;
       p.hidden = true;
-      const bub = new PH.Ent.Bubble(p, { online: !!this.online });
+      const bub = new PH.Ent.Bubble(p, { online: !!this.online, at: p.deathSpot || null });
       p.bubble = bub;
       this.entities.push(bub);
       PH.Audio.sfx('pop');

@@ -162,6 +162,10 @@
       this.hidden = false;
       this.eliminated = false;
       this.lives = 5;
+      // 倒下瞬间的位置：泡泡固定生成在这里，别跟着尸体掉出画面
+      this.deathSpot = null;
+      this.deadFloat = false; // 掉坑专用：人已放回安全点，别再自由落体
+      this.deadFloatY = 0;
     }
 
     get cx() {
@@ -182,6 +186,16 @@
       this.hurtT = 0;
       this.dead = false;
       this.deadT = 0;
+      this.deathSpot = null;
+      this.deadFloat = false;
+      this.hidden = false;
+      this.bubbled = false;
+      this.bubble = null;
+    }
+
+    // 记下倒下的位置，之后泡泡就飘在这儿
+    markDeath() {
+      this.deathSpot = { x: this.cx, y: this.y };
     }
 
     hurt(n, g, srcX) {
@@ -213,6 +227,7 @@
         this.hp = 0;
         this.dead = true;
         this.deadT = 0;
+        this.markDeath();
         this.vy = -520;
         PH.Audio.sfx('die');
       }
@@ -296,6 +311,11 @@
 
       if (this.dead) {
         this.deadT += dt;
+        if (this.deadFloat) {
+          // 掉坑的人已经放回安全落脚点，原地轻轻浮着等变泡泡
+          this.y = this.deadFloatY + Math.sin(this.deadT * 6) * 4;
+          return;
+        }
         this.vy += 1800 * dt;
         this.y += this.vy * dt;
         this.x += this.vx * dt;
@@ -361,21 +381,31 @@
       // 掉出世界
       if (this.y > g.level.h * T + 80) {
         if (g.duel || g.online) {
+          // 多人：掉坑也算一次倒下，和被怪物打倒走同一条「扣命 → 变泡泡」流程。
+          // 先把人放回最近的安全落脚点，泡泡才会飘在队友跳起来够得到的半空，
+          // 而不是留在画面外的深渊里。
           const sp = this.lastSafe || this.spawn || { x: g.player.spawn.x, y: g.player.spawn.y };
           this.x = sp.x;
-          this.y = sp.y;
+          this.y = sp.y - 8;
           this.vx = 0;
           this.vy = 0;
-          this.stun = 0.85;
-          this.invuln = 1.4;
-          this.squash = 0.8;
-          PH.Audio.sfx('hurt');
-          g.burst(sp.x + this.w / 2, sp.y + this.h / 2, 14, { color: '#E2574C', kind: 'paper' });
-          g.toast(g.online ? '掉下去了 · 回到落脚点' : this.tag + ' 掉下去了');
+          this.onGround = false;
+          this.invuln = 0;
+          this.stun = 0;
+          this.hp = 0;
+          this.dead = true;
+          this.deadT = 0;
+          this.deadFloat = true;
+          this.deadFloatY = this.y;
+          this.markDeath();
+          PH.Audio.sfx('die');
+          g.burst(this.cx, this.cy, 14, { color: '#E2574C', kind: 'paper' });
+          g.toast((g.online ? '' : this.tag + ' ') + '掉下去了 · 快跳起来戳破泡泡');
         } else if (!this.dead) {
           this.dead = true;
           this.deadT = 0;
           this.hp = 0;
+          this.markDeath();
           PH.Audio.sfx('die');
         }
       }
@@ -1147,8 +1177,11 @@
       this.player = player;
       this.w = 46;
       this.h = 46;
-      this.x = player.cx - 23;
-      this.y = player.y + player.h * 0.3;
+      // at = 倒下瞬间的位置；没给就用当前位置兜底。
+      // 这样掉坑的人虽然掉进了深渊，泡泡依旧固定飘在安全落脚点上方。
+      const at = opts.at || null;
+      this.x = (at ? at.x : player.cx) - 23;
+      this.y = (at ? at.y : player.y) + player.h * 0.3;
       this.baseY = this.y;
       this.t = 0;
       this.dead = false;
