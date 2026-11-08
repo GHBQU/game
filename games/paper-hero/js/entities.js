@@ -7,6 +7,15 @@
   const LYRICS = '窗外的天气就像是你多变表情下雨陪我哭泣滴清晰呼吸爱里想念透明勇敢'.split('');
   PH.LYRICS = LYRICS;
 
+  // 联机共享世界：拾取 / 点亮记录点统一走 World.netClaim 广播编号；
+  // 单机（或还没有 netClaim 的旧版）直接就地生效，玩法完全不变。
+  // body 可以返回 undo()，用于「两个人同一瞬间抢到同一个东西」时撤回奖励。
+  function netConsume(self, g, kind, body, extra) {
+    if (g && g.netClaim) return g.netClaim(self, kind, body, extra);
+    body(extra || {});
+    return true;
+  }
+
   /* ---------------- 物理 ---------------- */
   const Phys = (PH.Phys = {
     resolveX(e, g) {
@@ -1090,10 +1099,14 @@
       }
       if (d < 26) {
         this.dead = true;
-        p.coins++;
-        p.score += 100;
-        PH.Audio.sfx('coin');
-        g.burst(this.x + 9, this.y + 11, 5, { color: '#F2C14E', kind: 'star', small: true });
+        netConsume(this, g, 'take', () => {
+          const before = { c: p.coins, s: p.score };
+          p.coins++;
+          p.score += 100;
+          PH.Audio.sfx('coin');
+          g.burst(this.x + 9, this.y + 11, 5, { color: '#F2C14E', kind: 'star', small: true });
+          return () => { p.coins = before.c; p.score = before.s; };
+        });
       }
     }
     draw(ctx, g) {
@@ -1129,9 +1142,22 @@
       if (!p || p.dead) return;
       if (U.hit(this, { x: p.x - 4, y: p.y - 4, w: p.w + 8, h: p.h + 8 })) {
         this.dead = true;
-        const res = p.addItem(this.kind, g);
-        const healed = res && res.healed;
-        g.toast(ITEM_LABEL[this.kind] + (healed ? '  ·  回复 ' + healed + ' 心' : ''));
+        netConsume(this, g, 'take', () => {
+          // 记下道具生效前的状态：万一对方抢先一步，能原样撤回
+          const b = {
+            hp: p.hp, hasIce: p.hasIce, grown: p.grown, growT: p.growT,
+            shield: p.shield, mount: p.mount,
+            gun: p.ammo.gun, egg: p.ammo.egg, weak: p.ammo.weak,
+          };
+          const res = p.addItem(this.kind, g);
+          const healed = res && res.healed;
+          g.toast(ITEM_LABEL[this.kind] + (healed ? '  ·  回复 ' + healed + ' 心' : ''));
+          return () => {
+            p.hp = b.hp; p.hasIce = b.hasIce; p.grown = b.grown; p.growT = b.growT;
+            p.shield = b.shield; p.mount = b.mount;
+            p.ammo.gun = b.gun; p.ammo.egg = b.egg; p.ammo.weak = b.weak;
+          };
+        });
       }
     }
     draw(ctx) {
@@ -1333,10 +1359,14 @@
       if (!p || p.dead || p.eliminated) return;
       if (U.hit(this, { x: p.x - 8, y: p.y - 8, w: p.w + 16, h: p.h + 16 })) {
         this.dead = true;
-        g.gainLife(1);
-        g.burst(this.x + 15, this.y + 15, 16, { color: '#9FE6F5', kind: 'spark' });
-        g.burst(this.x + 15, this.y + 15, 8, { color: '#F0798C', kind: 'star' });
-        g.toast('多一条命');
+        netConsume(this, g, 'take', () => {
+          const undo = g.netLifeUndo ? g.netLifeUndo() : null;
+          g.gainLife(1);
+          g.burst(this.x + 15, this.y + 15, 16, { color: '#9FE6F5', kind: 'spark' });
+          g.burst(this.x + 15, this.y + 15, 8, { color: '#F0798C', kind: 'star' });
+          g.toast('多一条命');
+          return undo;
+        });
       }
     }
     draw(ctx) {
@@ -1390,10 +1420,13 @@
       if (!p || p.dead) return;
       if (p.hp >= p.maxHp) return; // 满血时不消耗，留着以后吃
       if (U.hit(this, { x: p.x - 6, y: p.y - 6, w: p.w + 12, h: p.h + 12 })) {
-        if (p.heal(this.amount, g) > 0) {
-          this.dead = true;
+        this.dead = true;
+        netConsume(this, g, 'take', () => {
+          const before = p.hp;
+          p.heal(this.amount, g);
           g.burst(this.x + this.w / 2, this.y + this.h / 2, 14, { color: '#F0798C', kind: 'star' });
-        }
+          return () => { p.hp = before; };
+        });
       }
     }
     draw(ctx) {
@@ -1475,11 +1508,13 @@
       this.t += dt;
       const p = g.player;
       if (!this.active && p && !p.dead && U.hit(this, p)) {
-        this.active = true;
-        g.checkpoint = { x: this.x - 4, y: this.y + 28 - 56 };
-        PH.Audio.sfx('checkpoint');
-        g.toast('记录点');
-        g.burst(this.x + 8, this.y, 18, { color: '#F2C14E', kind: 'star' });
+        netConsume(this, g, 'cp', () => {
+          this.active = true;
+          g.checkpoint = { x: this.x - 4, y: this.y + 28 - 56 };
+          PH.Audio.sfx('checkpoint');
+          g.toast('记录点');
+          g.burst(this.x + 8, this.y, 18, { color: '#F2C14E', kind: 'star' });
+        });
       }
     }
     draw(ctx) {

@@ -389,6 +389,8 @@
       // 异境关卡：装载反常空间规则（常规关卡 def.odd 缺省，这里等于没调用）
       if (PH.Oddity) PH.Oddity.install(this, def);
       this.updateCamera(1, true);
+      // 联机：给初始实体编上全房间一致的编号，并把开跑前后的事件补放一遍
+      if (this.online) this.initNetWorld();
     }
 
     buildProps() {
@@ -871,6 +873,189 @@
       });
     }
 
+    /* ---------------- 联机：一份共享的世界 ----------------
+     * 关卡 def 大家是同一份、实体按同一顺序生成，所以按顺序给每个实体编一个 nid，
+     * 四个端的 nid 天然对得上。谁打死怪 / 捡走东西 / 点亮记录点，就把 nid 广播出去，
+     * 别人收到后同步移除；房主再定期发一份「已消费清单」兜底补漏。
+     */
+    initNetWorld() {
+      this.netEpoch = PH.NetSync ? PH.NetSync.epoch : 0;
+      this.netIds = new Map();    // nid -> 实体
+      this.netTaken = new Set();  // 已经被消费掉的 nid
+      this.netRemote = new Set(); // 其中由别人消费的
+      this.netClaims = new Map(); // 本地消费的，留着处理「同时抢」
+      this.netDrops = new Map();  // 怪掉落的血心（动态实体）
+      this.netDyn = 0;
+      this.netSyncT = 0;
+      let i = 0;
+      for (const e of this.entities) {
+        if (!e || e.dead) continue;
+        e.nid = 'w' + i++;
+        this.netIds.set(e.nid, e);
+      }
+      if (PH.NetSync) PH.NetSync.flush(this);
+      // 万一自己比房主晚建好世界，问一句当前状态
+      if (PH.Net) PH.Net.relay({ k: 'wsync', ep: this.netEpoch });
+    }
+
+    // 本地一次「消费」统一走这里：body(extra) 立刻生效，可返回 undo() 用来撤回奖励
+    netClaim(e, kind, body, extra) {
+      if (!this.online || !e || !e.nid) {
+        if (body) body(extra || {});
+        return true;
+      }
+      const id = e.nid;
+      if (this.netTaken.has(id)) {
+        // 别人已经先拿走了：本地这份直接消失，但不再发奖励
+        if (kind !== 'cp') e.dead = true;
+        return false;
+      }
+      this.netTaken.add(id);
+      const ex = extra || {};
+      let undo = null;
+      if (body) undo = body(ex) || null;
+      const ev = Object.assign(
+        { k: 'ev', ep: this.netEpoch, id: id, a: kind, t: Math.round(this.raceTime * 1000), by: PH.Net.myId || 'me' },
+        ex
+      );
+      PH.Net.relay(ev);
+      this.netClaims.set(id, { t: ev.t, by: ev.by, undo: undo, at: this.time });
+      return true;
+    }
+
+    netLifeUndo() {
+      const before = Save.lives;
+      const p = this.player;
+      return () => {
+        Save.lives = before;
+        if (p) p.lives = before;
+        Save.save();
+        if (PH.Hub && PH.Hub.pushSave) PH.Hub.pushSave(Save.snapshot());
+      };
+    }
+
+    // 打怪随机掉的血心也是共享物：编一个全局 nid，随击杀事件一起告诉别人
+    netDropHeart(x, y, big) {
+      if (!this.online) return null;
+      const id = 'd' + (PH.Net.myId || 'x') + ':' + ++this.netDyn;
+      const h = new PH.Ent.HeartPickup(x, y, big);
+      h.nid = id;
+      if (this.netTaken.has(id)) h.dead = true;
+      this.netIds.set(id, h);
+      this.netDrops.set(id, { x: x, y: y, big: big ? 1 : 0 });
+      this.entities.push(h);
+      return id;
+    }
+
+    recvDrop(d) {
+      if (!d || !d.id || this.netDrops.has(d.id)) return;
+      this.netDrops.set(d.id, { x: d.x, y: d.y, big: d.big });
+      const h = new PH.Ent.HeartPickup(d.x, d.y, !!d.big);
+      h.nid = d.id;
+      if (this.netTaken.has(d.id)) h.dead = true;
+      this.netIds.set(d.id, h);
+      this.entities.push(h);
+    }
+
+    applyNetEvent(ev) {
+      if (!this.online || !ev || !ev.id || ev.ep !== this.netEpoch) return;
+      // 受击：只往下压血，不用「已消费」那套（一只怪会被打好几下）
+      if (ev.a === 'hit') {
+        const target = this.netIds.get(ev.id);
+        if (target && !target.dead && typeof ev.hp === 'number' && ev.hp < target.hp) {
+          target.hp = Math.max(0, ev.hp);
+          target.flash = 0.22;
+          target.squash = 1.18;
+        }
+        return;
+      }
+      if (this.netRemote.has(ev.id)) return;
+      this.netRemote.add(ev.id);
+      // 同一瞬间抢同一个东西：以「本轮用时更早、再按玩家 id」判归属，
+      // 输的一方把刚加的金币 / 血 / 道具撤回去，不会两边都算数
+      const mine = this.netClaims.get(ev.id);
+      if (mine) {
+        const lose = ev.t < mine.t || (ev.t === mine.t && String(ev.by) < String(mine.by));
+        if (lose) {
+          try {
+            if (mine.undo) mine.undo();
+          } catch (err) {}
+          this.toast('被 ' + PH.Net.nameOf(ev.by) + ' 抢先一步');
+        }
+        this.netClaims.delete(ev.id);
+      }
+      this.netTaken.add(ev.id);
+      if (ev.drop) this.recvDrop(ev.drop);
+      const e = this.netIds.get(ev.id);
+      if (!e) return;
+      if (ev.a === 'cp') {
+        e.active = true;
+        this.checkpoint = { x: e.x - 4, y: e.y + 28 - 56 };
+        this.burst(e.x + 8, e.y, 12, { color: '#F2C14E', kind: 'star' });
+        return;
+      }
+      e.dead = true;
+      if (ev.a === 'kill') {
+        const x = e.cx != null ? e.cx : ev.x || 0;
+        const y = e.cy != null ? e.cy : ev.y || 0;
+        this.particles.push({
+          kind: 'enemyPoof', x: x, y: y, t: 0, life: 0.5,
+          spr: ev.spr || e.spr || 'sausage',
+          w: (ev.w || e.w || 40) * 1.2, h: (ev.h || e.h || 50) * 1.2, flip: false,
+        });
+        this.burst(x, y, 14, { color: '#F2C14E', kind: 'paper' });
+        if (ev.boss || e.isBoss) {
+          this.bossDefeated = true;
+          if (e.state !== undefined) e.state = 'dead';
+          this.shake(14, 0.5);
+        }
+      } else if (ev.a === 'take') {
+        this.burst(e.x + (e.w || 20) / 2, e.y + (e.h || 20) / 2, 6, { color: '#FFF0B8', kind: 'star', small: true });
+      }
+    }
+
+    // 房主的「已消费清单」：中途加入、偶尔漏消息、换房主都能补齐
+    applyNetSnapshot(s) {
+      if (!this.online || !s || s.ep !== this.netEpoch) return;
+      for (const d of s.drops || []) this.recvDrop(d);
+      for (const id of s.ids || []) {
+        if (this.netTaken.has(id)) continue;
+        this.netTaken.add(id);
+        const e = this.netIds.get(id);
+        if (!e) continue;
+        if (e.type === 'checkpoint') {
+          e.active = true;
+          this.checkpoint = { x: e.x - 4, y: e.y + 28 - 56 };
+        } else {
+          e.dead = true;
+          if (e.isBoss) this.bossDefeated = true;
+        }
+      }
+      if (s.boss) this.bossDefeated = true;
+    }
+
+    sendNetSnapshot() {
+      if (!this.online || !PH.Net || !PH.Net.isHost()) return;
+      const drops = [];
+      for (const [id, d] of this.netDrops) drops.push({ id: id, x: d.x, y: d.y, big: d.big });
+      PH.Net.relay({
+        k: 'ws', ep: this.netEpoch,
+        ids: Array.from(this.netTaken),
+        drops: drops,
+        boss: this.bossDefeated ? 1 : 0,
+      });
+    }
+
+    updateNetSync(dt) {
+      if (this.netClaims && this.netClaims.size) {
+        for (const [id, c] of this.netClaims) if (this.time - c.at > 1.6) this.netClaims.delete(id);
+      }
+      this.netSyncT -= dt;
+      if (this.netSyncT > 0) return;
+      this.netSyncT = 2.5;
+      this.sendNetSnapshot();
+    }
+
     // 联机：把别人的位置插值过来，并把自己的位置按 20Hz 发出去
     updateNet(dt) {
       const list = Array.from(this.ghosts.values());
@@ -964,6 +1149,7 @@
       if (this.online) {
         this.updateNet(d);
         this.updateOnlineDown(d);
+        this.updateNetSync(d);
       }
       this.player = this.players[0];
       if (this.player.coins !== this.coinCount) this.coinCount = this.player.coins;
@@ -2392,8 +2578,7 @@
     const by = y + ph - 72;
     if (PH.Net.isHost()) {
       addBtn('onAgain', VW / 2 - 218, by, 140, 50, '再来一局', () => {
-        PH.Net.relay({ k: 'start', level: G.levelId });
-        PH.startOnlineRace(G.levelId);
+        PH.beginOnlineRace(G.levelId);
       }, { color: '#FFF3D0', size: 18 });
       addBtn('onRoom', VW / 2 - 64, by, 140, 50, '回到房间', () => {
         PH.leaveOnlineRace(true);
@@ -2520,8 +2705,7 @@
     const by = y + ph - 70;
     if (lost && PH.Net.isHost()) {
       addBtn('onAgain', VW / 2 - 218, by, 140, 50, '再来一局', () => {
-        PH.Net.relay({ k: 'start', level: G.levelId });
-        PH.startOnlineRace(G.levelId);
+        PH.beginOnlineRace(G.levelId);
       }, { color: '#FFF3D0', size: 18 });
       addBtn('onRoom', VW / 2 - 64, by, 140, 50, '回到房间', () => {
         PH.leaveOnlineRace(true);
@@ -3933,7 +4117,21 @@
   // 收到别人的联机消息
   PH.onlinePeerMsg = function (from, d) {
     const w = G.world;
-    if (!d || !w || !w.online) return;
+    if (!d) return;
+    // 共享世界事件：世界还没建好就先攒着，建好瞬间补放，不会漏掉开跑前几帧的消息
+    if (d.k === 'ev' || d.k === 'ws' || d.k === 'wsync') {
+      if (d.ep && PH.NetSync && d.ep !== PH.NetSync.epoch) return; // 上一轮的迟到消息
+      if (d.k === 'wsync') {
+        if (w && w.online && PH.Net.isHost()) w.sendNetSnapshot();
+      } else if (w && w.online) {
+        if (d.k === 'ev') w.applyNetEvent(d);
+        else w.applyNetSnapshot(d);
+      } else if (PH.NetSync) {
+        PH.NetSync.buffer(d);
+      }
+      return;
+    }
+    if (!w || !w.online) return;
     if (d.k === 'st') {
       let g = w.ghosts.get(from);
       if (!g) {
@@ -4014,7 +4212,7 @@
     }
   };
 
-  // 有人退房：把幽灵也撤掉
+  // 有人进出房间：把幽灵增减一下，顺便给新来的人补一份世界状态
   PH.onlinePeersChanged = function () {
     const w = G.world;
     if (!w || !w.online) return;
@@ -4022,6 +4220,18 @@
     for (const id of Array.from(w.ghosts.keys())) {
       if (ids.indexOf(id) < 0) w.ghosts.delete(id);
     }
+    if (PH.Net.isHost()) w.sendNetSnapshot();
+  };
+
+  // 房主开新一局：先定本轮纪元，再通知大家，最后自己进关卡。
+  // 纪元让上一轮迟到的「怪物死了 / 道具没了」不会串到新一局。
+  PH.beginOnlineRace = function (id) {
+    if (!PH.Levels[id]) return;
+    const wid = PH.NetSync ? PH.NetSync.newEpoch() : String(Date.now());
+    if (PH.NetSync) PH.NetSync.begin(wid);
+    PH.Net.relay({ k: 'start', level: id, wid: wid });
+    if (PH.Online) PH.Online.close();
+    PH.startOnlineRace(id);
   };
 
   PH.startOnlineRace = function (id) {

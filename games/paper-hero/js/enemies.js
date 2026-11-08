@@ -4,6 +4,15 @@
   const T = 32;
   const A = PH.Assets;
 
+  // 联机共享世界：击杀统一走 World.netClaim 把实体编号广播出去，
+  // 别人收到后同一只怪一起消失；单机沿用原来的死亡表现。
+  // body(extra) 可以返回 undo()，供「同时击杀」判归属时撤回分数。
+  function netDie(self, g, body) {
+    if (g && g.netClaim) return g.netClaim(self, 'kill', body);
+    body({});
+    return true;
+  }
+
   class Enemy {
     constructor(o) {
       this.type = 'enemy';
@@ -109,6 +118,13 @@
         this.die(g);
         return true;
       }
+      // 多血量的怪 / BOSS：把剩余血量也同步出去，大家打的是同一条血
+      if (g && g.online && this.nid && this.maxHp > 1 && PH.Net && PH.Net.relay) {
+        PH.Net.relay({
+          k: 'ev', ep: g.netEpoch, id: this.nid, a: 'hit', hp: this.hp,
+          t: Math.round(g.raceTime * 1000), by: PH.Net.myId || 'me',
+        });
+      }
       return false;
     }
 
@@ -119,27 +135,40 @@
 
     die(g) {
       if (this.dead) return;
-      this.dead = true;
-      this.deadT = 0;
-      g.particles.push({
-        kind: 'enemyPoof',
-        x: this.cx,
-        y: this.cy,
-        t: 0,
-        life: 0.5,
-        spr: this.spr,
-        w: this.w * 1.2,
-        h: this.h * 1.2,
-        flip: this.dir > 0,
+      netDie(this, g, (extra) => {
+        this.dead = true;
+        this.deadT = 0;
+        g.particles.push({
+          kind: 'enemyPoof',
+          x: this.cx,
+          y: this.cy,
+          t: 0,
+          life: 0.5,
+          spr: this.spr,
+          w: this.w * 1.2,
+          h: this.h * 1.2,
+          flip: this.dir > 0,
+        });
+        g.burst(this.cx, this.cy, 16, { color: '#F2C14E', kind: 'paper' });
+        g.addScore(this.scoreVal, this.cx, this.cy);
+        PH.Audio.sfx('stomp');
+        // 只剩最后一颗心时，小怪有几率掉一颗回血心；这颗心也要同步给别人
+        const p = g.player;
+        if (p && !p.dead && p.hp <= 1 && this.w < 80 && Math.random() < 0.28) {
+          const hx = this.cx - 16, hy = this.cy - 16;
+          if (g.netDropHeart) {
+            const id = g.netDropHeart(hx, hy, false);
+            if (id) extra.drop = { id: id, x: hx, y: hy, big: 0 };
+          } else {
+            g.entities.push(new PH.Ent.HeartPickup(hx, hy, false));
+          }
+        }
+        extra.spr = this.spr;
+        extra.w = this.w;
+        extra.h = this.h;
+        extra.boss = this.isBoss ? 1 : 0;
+        return () => { g.score -= this.scoreVal; };
       });
-      g.burst(this.cx, this.cy, 16, { color: '#F2C14E', kind: 'paper' });
-      g.addScore(this.scoreVal, this.cx, this.cy);
-      PH.Audio.sfx('stomp');
-      // 只剩最后一颗心时，小怪有几率掉一颗回血心
-      const p = g.player;
-      if (p && !p.dead && p.hp <= 1 && this.w < 80 && Math.random() < 0.28) {
-        g.entities.push(new PH.Ent.HeartPickup(this.cx - 16, this.cy - 16, false));
-      }
     }
 
     drawShadow(ctx, g) {
@@ -945,16 +974,23 @@
     }
     die(g) {
       if (this.dead) return;
-      this.dead = true;
-      this.deadT = 0;
-      this.state = 'dead';
-      PH.Audio.sfx('roar');
-      PH.Audio.sfx('boom');
-      g.shake(24, 1.2);
-      g.hitstop(0.2);
-      g.burst(this.cx, this.cy, 40, { color: '#E2574C', kind: 'paper' });
-      g.addScore(this.scoreVal, this.cx, this.cy);
-      g.bossDefeated = true;
+      netDie(this, g, (extra) => {
+        this.dead = true;
+        this.deadT = 0;
+        this.state = 'dead';
+        PH.Audio.sfx('roar');
+        PH.Audio.sfx('boom');
+        g.shake(24, 1.2);
+        g.hitstop(0.2);
+        g.burst(this.cx, this.cy, 40, { color: '#E2574C', kind: 'paper' });
+        g.addScore(this.scoreVal, this.cx, this.cy);
+        g.bossDefeated = true;
+        extra.boss = 1;
+        extra.spr = this.spr || 'sausage';
+        extra.w = this.w;
+        extra.h = this.h;
+        return () => { g.score -= this.scoreVal; };
+      });
     }
     update(dt, g) {
       this.t += dt;
@@ -1160,15 +1196,22 @@
     }
     die(g) {
       if (this.dead) return;
-      this.dead = true;
-      this.deadT = 0;
-      this.state = 'dead';
-      PH.Audio.sfx('roar');
-      g.shake(26, 1.4);
-      g.hitstop(0.22);
-      g.burst(this.cx, this.cy, 50, { color: '#9C4A6A', kind: 'paper' });
-      g.addScore(this.scoreVal, this.cx, this.cy);
-      g.bossDefeated = true;
+      netDie(this, g, (extra) => {
+        this.dead = true;
+        this.deadT = 0;
+        this.state = 'dead';
+        PH.Audio.sfx('roar');
+        g.shake(26, 1.4);
+        g.hitstop(0.22);
+        g.burst(this.cx, this.cy, 50, { color: '#9C4A6A', kind: 'paper' });
+        g.addScore(this.scoreVal, this.cx, this.cy);
+        g.bossDefeated = true;
+        extra.boss = 1;
+        extra.spr = this.spr || 'sausage';
+        extra.w = this.w;
+        extra.h = this.h;
+        return () => { g.score -= this.scoreVal; };
+      });
     }
     update(dt, g) {
       this.t += dt;

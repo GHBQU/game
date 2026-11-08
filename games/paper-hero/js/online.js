@@ -110,6 +110,7 @@
         if (!d) return;
         if (d.k === 'start') {
           this.close();
+          if (PH.NetSync) PH.NetSync.begin(d.wid || 0);
           if (PH.startOnlineRace) PH.startOnlineRace(d.level);
         } else if (PH.onlinePeerMsg) PH.onlinePeerMsg(data.from, d);
       }
@@ -489,9 +490,14 @@
         this.flash('至少两个人才能开赛，把邀请链接发给朋友吧', true);
         return;
       }
-      PH.Net.relay({ k: 'start', level: this.level });
-      this.close();
-      if (PH.startOnlineRace) PH.startOnlineRace(this.level);
+      // 开赛统一走 game.js：先给本轮世界定一个编号，再通知所有人，
+      // 免得上一轮「怪物死了 / 道具没了」的迟到消息串到新一局
+      if (PH.beginOnlineRace) PH.beginOnlineRace(this.level);
+      else {
+        PH.Net.relay({ k: 'start', level: this.level });
+        this.close();
+        if (PH.startOnlineRace) PH.startOnlineRace(this.level);
+      }
     },
 
     leave() {

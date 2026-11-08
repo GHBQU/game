@@ -229,4 +229,37 @@
       return p ? p.name : '玩家';
     },
   });
+
+  /* ---------------- 共享世界事件簿 ----------------
+   * 联机竞速里每人各跑一份世界，但「怪物被打死 / 金币道具被捡走 / 记录点被点亮」
+   * 必须是全房间同一份状态。这里只存两样轻量的东西，玩法仍由 game.js 的 World 决定：
+   *   epoch   本轮比赛的编号，换关卡时一起换，上一轮的迟到消息直接丢掉
+   *   pending 世界还没建好时先收着的事件，World 一出生就补放一遍
+   */
+  PH.NetSync = {
+    epoch: 0,
+    pending: [],
+
+    newEpoch() {
+      return Date.now().toString(36) + '-' + (N.myId || 'x') + '-' + Math.random().toString(36).slice(2, 6);
+    },
+    begin(wid) {
+      this.epoch = wid || this.newEpoch();
+      this.pending.length = 0;
+      return this.epoch;
+    },
+    // 世界还没建好：只要纪元对得上就先攒着
+    buffer(d) {
+      if (d && d.ep === this.epoch && this.pending.length < 400) this.pending.push(d);
+    },
+    flush(w) {
+      if (!w || !this.pending.length) return;
+      const list = this.pending.slice();
+      this.pending.length = 0;
+      for (const d of list) {
+        if (d.k === 'ev' && w.applyNetEvent) w.applyNetEvent(d);
+        else if (d.k === 'ws' && w.applyNetSnapshot) w.applyNetSnapshot(d);
+      }
+    },
+  };
 })(window.PH);
