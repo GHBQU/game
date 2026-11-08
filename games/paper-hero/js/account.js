@@ -44,7 +44,7 @@
       this.foot = document.getElementById('accFoot');
       this.title = document.getElementById('accTitle');
       const lead = this.el.querySelector('.acc-lead');
-      if (lead) lead.textContent = '和游戏厅主页共用同一个账号，游戏里不注册。进度存在这台电脑上。';
+      if (lead) lead.textContent = '和游戏厅主页共用同一个账号，游戏里不注册。服务在线时账号存在房主电脑上，离线才存本机浏览器。';
       document.getElementById('accClose').addEventListener('click', () => this.close());
       this.el.addEventListener('mousedown', (e) => {
         if (e.target.classList && e.target.classList.contains('acc-backdrop')) this.close();
@@ -62,6 +62,7 @@
       this.mode = 'main';
       this.draft = '';
       this.notice = '';
+      if (PH.Identity && PH.Identity.refreshServerAccounts) PH.Identity.refreshServerAccounts();
       this.render();
     },
 
@@ -84,8 +85,8 @@
       this.body.innerHTML = html;
       this.foot.innerHTML =
         this.mode === 'main'
-          ? '进度存在这台电脑 · 共 ' + PH.Profiles.count + ' 个本机分档'
-          : '账号只在游戏厅主页注册 · 密码和用户都保存在本机';
+          ? '账号与进度存在房主电脑 · 共 ' + PH.Profiles.count + ' 个本机分档'
+          : '服务在线：账号存在房主电脑 · 离线：只存本机浏览器';
       this.wire();
       const first = this.body.querySelector('input');
       if (first) setTimeout(() => { first.focus(); first.select(); }, 60);
@@ -98,16 +99,17 @@
       const home = id ? id.homeUrl() : '';
       const homeLink = home
         ? '<a class="id-link" href="' + esc(home) + '">去主页注册 / 登录</a>'
-        : '在游戏厅主页注册一次，账号就会存到这台电脑';
+        : '在游戏厅主页注册一次；服务在线时账号会存到房主电脑';
 
       if (u) {
         const off = u.source === 'offline';
+        const srv = u.source === 'server';
         return (
           '<div class="id-card' + (off ? ' off' : '') + '">' +
           '<span class="id-av">' + esc(Array.from(u.name)[0] || '勇') + '</span>' +
           '<span class="id-who"><b>' + esc(u.name) + '</b>' +
-          '<i>' + (off ? '离线密钥已验证 · 进度仍存在本机' : '与游戏厅主页共用 · 服务在线时同步存档') + '</i></span>' +
-          '<span class="id-badge">' + (off ? '离线' : '主页账号') + '</span></div>' +
+          '<i>' + (off ? '离线密钥已验证 · 进度仍存在本机' : srv ? '账号存在房主电脑 · 换设备也能登录' : '与游戏厅主页共用 · 服务在线时同步存档') + '</i></span>' +
+          '<span class="id-badge">' + (off ? '离线' : srv ? '本机服务器' : '主页账号') + '</span></div>' +
           '<p class="acc-tip" style="margin:0 0 12px">' +
           '账号 <b>' + esc(u.name) + '</b> 的档案已自动对上，单机 / 双人 / 联机的进度是同一份。' +
           ' <button class="id-link" data-act="switchAcct">切换账号</button>' +
@@ -126,17 +128,17 @@
           '就能用本机保存的主页账号继续玩；不登录也能直接单机。</p>' +
           '<button class="acc-btn primary" data-act="toKey">输入离线密钥</button>' +
           '<button class="acc-btn ghost" data-act="toLogin">用本机账号登录</button>' +
-          '<p class="acc-tip">' + homeLink + '。注册时用户名和密码（加盐摘要）会保存在这台电脑。</p>'
+          '<p class="acc-tip">' + homeLink + '。服务在线时用户名和密码（加盐摘要）存在房主电脑上，服务器不在线才存本机浏览器。</p>'
         );
       }
       return (
         '<div class="id-card">' +
         '<span class="id-av">?</span>' +
-        '<span class="id-who"><b>还没有登录</b><i>游戏里不注册，直接用主页账号</i></span>' +
+        '<span class="id-who"><b>还没有登录</b><i>游戏里不注册，直接用已有账号</i></span>' +
         '<span class="id-badge">未登录</span></div>' +
-        '<p class="id-note">账号和档案是同一个：登录后会按账号名自动对上进度，不用在游戏里再建一次。</p>' +
-        '<button class="acc-btn primary" data-act="toLogin">用主页账号登录</button>' +
-        '<p class="acc-tip">' + homeLink + '。注册时用户名和密码（加盐摘要）会保存在这台电脑。</p>'
+        '<p class="id-note">账号和档案是同一个：登录后会按账号名自动对上进度。服务在线时账号存在房主电脑上，别的设备也能登录。</p>' +
+        '<button class="acc-btn primary" data-act="toLogin">登录已有账号</button>' +
+        '<p class="acc-tip">' + homeLink + '。服务在线时用户名和密码（加盐摘要）存在房主电脑上，服务器不在线才存本机浏览器。</p>'
       );
     },
 
@@ -165,12 +167,14 @@
         : '';
       return (
         '<p class="id-note">' +
-        (off ? '服务离线：先确认密钥已验证，再用本机保存的账号密码登录。' : '直接用游戏厅主页的账号登录；游戏里没有注册入口。') +
+        (off
+          ? '服务离线：先确认密钥已验证，再用本机保存的账号密码登录。'
+          : '服务在线：直接用账号密码登录，账号存在房主这台电脑上；服务器离线时会自动改用本机保存的账号。') +
         '</p>' + opts +
         '<div class="acc-field"><label>用户名</label>' +
-        '<input id="idName" type="text" autocomplete="username" placeholder="主页注册时的用户名" /></div>' +
+        '<input id="idName" type="text" autocomplete="username" placeholder="账号用户名" /></div>' +
         '<div class="acc-field"><label>密码</label>' +
-        '<input id="idPw" type="password" autocomplete="current-password" placeholder="主页注册时的密码" /></div>' +
+        '<input id="idPw" type="password" autocomplete="current-password" placeholder="账号密码" /></div>' +
         '<p class="acc-msg" id="accMsg"></p>' +
         '<button class="acc-btn primary" data-act="doLogin">' + (off ? '离线登录' : '登录主页账号') + '</button>' +
         (off && !(id && id.keyVerified()) ? '<button class="acc-btn ghost" data-act="toKey">先去验证密钥</button>' : '') +
@@ -215,7 +219,7 @@
         '<span>限时 <b>' + s.challenge + '</b> 张</span></div>' +
         '<div class="acc-label">切换本机分档</div>' +
         '<div class="acc-list">' + rows + '</div>' +
-        '<p class="acc-tip">需要新分档就到游戏厅主页注册账号，这里不再单独注册。' +
+        '<p class="acc-tip">需要新账号就到游戏厅主页注册；服务在线时账号存到房主电脑，离线才存本机浏览器。' +
         '换电脑或清理浏览器数据会丢进度，记得别清缓存。</p>'
       );
     },
@@ -341,7 +345,7 @@
       const r = id.needKey() ? await id.loginOffline(name, pw) : await id.loginOnline(name, pw);
       this.busy = false;
       if (!r.ok) { this.msg(r.msg || '登录失败', true); return; }
-      this.notice = '已和主页账号对上：' + name;
+      this.notice = (r.msg || '已登录') + '：' + (r.name || name);
       if (PH.Hub) PH.Hub.loadAccount();
       if (PH.applyProfile) PH.applyProfile('switch');
       this.mode = 'main';

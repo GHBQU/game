@@ -12,7 +12,8 @@
  *    同时读同目录 endpoint.json 兜底；逐个 /health 探活，挑最快且健康的那个。
  * 2. 公网页面会自动定时重试：朋友可以先把页面开着，服务器一开机就自己连上，不用刷新；
  *    隧道换地址后也会自动跟到新地址。?server= 可强制指定（邀请链接用它，失效时自动回退）。
- * 3. 账号：用游戏厅（../../arcade.js）的账号；服务没开就静默关掉账号和联机，单机照常玩。
+ * 3. 账号：服务在线时存在房主电脑的 data/accounts.json，兼容游戏厅（../../arcade.js）账号；
+ *    服务没开就退回本机浏览器凭据 + 离线密钥，单机照常玩。
  */
 (function (PH) {
   const K_SERVER = 'paperhero.server'; // 手动/邀请指定的服务器地址
@@ -21,6 +22,7 @@
     endpoint: '',
     endpoints: [],
     candidates: [],
+    serverId: '',
     rtt: 0,
     account: null,
     lastError: '',
@@ -243,6 +245,7 @@
       if (!hits.length) {
         this.status = 'offline';
         this.endpoint = '';
+        this.serverId = '';
         this.rtt = 0;
         this.lastError = '本机服务没开，联机关掉；账号改用离线密钥验证';
         this.loadAccount();
@@ -255,9 +258,17 @@
       const best = forced || hits[0];
       this.endpoint = best.ep;
       this.endpoints = hits.map((h) => h.ep);
+      this.serverId = (best.info && best.info.sid) || '';
       this.rtt = best.ms;
       this.status = 'online';
       this.loadAccount();
+      // 本机浏览器里已有的账号摘要，补写到房主这台电脑上（每台服务器只补一次）
+      if (PH.Identity && PH.Identity.syncLocalToServer) {
+        try { PH.Identity.syncLocalToServer(); } catch (e) {}
+      }
+      if (PH.Identity && PH.Identity.refreshServerAccounts) {
+        try { PH.Identity.refreshServerAccounts(); } catch (e) {}
+      }
       this.emit('change');
       return true;
     },
@@ -325,8 +336,13 @@
       const hits = (await Promise.all(rest.map((e) => this.probe(e, 2000)))).filter(Boolean);
       if (hits.length) {
         this.endpoint = hits[0].ep;
+        this.serverId = (hits[0].info && hits[0].info.sid) || this.serverId;
         this.rtt = hits[0].ms;
         this.status = 'online';
+        this.loadAccount();
+        if (PH.Identity && PH.Identity.refreshServerAccounts) {
+          try { PH.Identity.refreshServerAccounts(); } catch (e) {}
+        }
         this.emit('change');
         return true;
       }
@@ -353,9 +369,9 @@
       return !!(window.Arcade && window.Arcade.current);
     },
 
-    // 云端存档：必须服务在线 + 有主页账号；离线时进度只存本机
+    // 本机服务器存档：服务在线 + 已登录（账号可以来自本机服务器，也可以是游戏厅主页）
     useAccount() {
-      return this.status === 'online' && !!this.account && !!window.Arcade;
+      return this.status === 'online' && !!this.account;
     },
 
     displayName() {
