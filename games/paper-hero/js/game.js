@@ -3722,6 +3722,8 @@
         location.replace('../../?locked=' + encodeURIComponent(code));
         return;
       }
+      // 邀请链接（?server=…&room=…）：服务器探活完成后自动打开联机面板并进房
+      if (PH.Online && PH.Online.consumeInvite) PH.Online.consumeInvite();
       if (PH.Hub.useAccount()) {
         const cloud = await PH.Hub.pullSave();
         if (!cloud) return;

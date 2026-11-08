@@ -2,11 +2,15 @@
  *
  * 这个文件负责三件事：
  *   1. 找到「本机服务」现在在哪：读同目录 endpoint.json，逐个 /health 探活，挑最快的那个。
- *      endpoint.json 由本机的 tools/publish-endpoint.py 在每次隧道重启后自动更新到 GitHub。
+ *      endpoint.json 由本机的 tools/tunnel.py 在每次隧道重启后自动更新到 GitHub。
+ *      **本机那台电脑就是服务器**：Cloudflare 快速隧道把它映射到公网，
+ *      设备 A / 设备 B 不用在同一个局域网，只要都连到同一个隧道地址就能进同一个房间。
+ *      邀请链接里的 ?server= 可以强制指定服务器，避免朋友误连到他自己电脑上的服务。
  *   2. 账号：用游戏厅（../../arcade.js）的账号，有账号才把进度存到本机服务上。
  *   3. 服务没开 / 探测失败 → 整个联机和账号系统静默关掉，游戏照常单机玩。
  */
 (function (PH) {
+  const K_SERVER = 'paperhero.server'; // 手动/邀请指定的服务器地址
   const H = (PH.Hub = {
     status: 'idle', // idle | probing | online | offline
     endpoint: '',
@@ -22,9 +26,57 @@
       if (this.on) this.on(type, data);
     },
 
+    /* ---------------- 指定服务器（邀请链接 / 手动填写） ---------------- */
+    normalize(u) {
+      u = String(u || '').trim().replace(/\/+$/, '');
+      if (!u) return '';
+      if (!/^https?:\/\//i.test(u)) u = 'https://' + u; // 隧道地址都是 https
+      try {
+        const x = new URL(u);
+        if (!/^https?:$/.test(x.protocol)) return '';
+        return x.origin;
+      } catch (e) {
+        return '';
+      }
+    },
+
+    // 邀请链接 ?server= 优先级最高，并记到本机，刷新后仍连同一台服务器
+    manual() {
+      try {
+        const q = new URLSearchParams(location.search);
+        const fromUrl = this.normalize(q.get('server') || q.get('s') || '');
+        if (fromUrl) {
+          try { localStorage.setItem(K_SERVER, fromUrl); } catch (e) {}
+          return fromUrl;
+        }
+        return this.normalize(localStorage.getItem(K_SERVER) || '');
+      } catch (e) {
+        return '';
+      }
+    },
+
+    setManual(u) {
+      const v = this.normalize(u);
+      try {
+        if (v) localStorage.setItem(K_SERVER, v);
+        else localStorage.removeItem(K_SERVER);
+      } catch (e) {}
+      // URL 上还留着 ?server= 时，以新填的为准
+      try {
+        const q = new URLSearchParams(location.search);
+        if (q.has('server') || q.has('s')) {
+          q.delete('server'); q.delete('s');
+          const s = q.toString();
+          history.replaceState(null, '', location.pathname + (s ? '?' + s : '') + location.hash);
+        }
+      } catch (e) {}
+      return v;
+    },
+
     /* ---------------- 端点发现 ---------------- */
     async loadCandidates() {
       const list = [];
+      const manual = this.manual();
       const here = location.protocol === 'http:' || location.protocol === 'https:' ? location.origin : '';
       // 自己开服务（页面就在服务根目录）时，同源就是最稳的；
       // 挂在游戏厅 /games/ 下面时同源是 Pages，探它只会 404，跳过
@@ -38,8 +90,15 @@
       } catch (e) {
         /* Pages 上拿不到就当没有 */
       }
-      // 本机直连兜底（file:// 双击打开时也能用）
-      list.push('http://localhost:8777');
+      // 本机直连兜底：只有双击 file:// 或页面本来就开在这台电脑上时才加。
+      // 公网页面绝不能探 localhost，否则朋友会连到他自己电脑的服务、房号永远对不上。
+      const localHost =
+        location.protocol === 'file:' ||
+        /^(localhost|127\.0\.0\.1|\[::1\]|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname);
+      // 页面本身就由那台服务发出时，同源地址已经在列表里，别再塞一个等价的 localhost 造成两端选路不一致
+      const hereIsServer = !!here && !/\/games\//.test(location.pathname) && /^(localhost|127\.0\.0\.1)/.test(location.hostname);
+      if (!manual && localHost && !hereIsServer) list.push('http://localhost:8777');
+      if (manual) list.unshift(manual);
       const out = [];
       list.forEach((u) => {
         if (u && out.indexOf(u) < 0) out.push(u);
@@ -91,9 +150,13 @@
         this.emit('change');
         return false;
       }
-      this.endpoint = hits[0].ep;
+      // 两台设备必须连同一台服务器，房号才对得上：邀请链接 / 手动指定的地址只要活着就强制选它
+      const manual = this.manual();
+      const forced = manual && hits.find((h) => h.ep === manual);
+      const best = forced || hits[0];
+      this.endpoint = best.ep;
       this.endpoints = hits.map((h) => h.ep);
-      this.rtt = hits[0].ms;
+      this.rtt = best.ms;
       this.status = 'online';
       this.loadAccount();
       this.emit('change');

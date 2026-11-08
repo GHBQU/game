@@ -30,6 +30,28 @@
       if (this.on) this.on(type, data);
     },
 
+    // 换服务器：彻底断开旧连接，下次 connect() 会重新读 Hub.endpoint
+    reset() {
+      this.stopPing();
+      if (this.ws) {
+        try {
+          this.ws.onclose = null;
+          this.ws.onmessage = null;
+          this.ws.onerror = null;
+          this.ws.onopen = null;
+          this.ws.close();
+        } catch (e) {}
+      }
+      this.ws = null;
+      this.status = 'idle';
+      this.error = '';
+      this.room = '';
+      this.hostId = '';
+      this.players = [];
+      this.myId = '';
+      this._wait = null;
+    },
+
     connect() {
       if (this.status === 'open') return Promise.resolve();
       if (this._wait) return this._wait;

@@ -528,6 +528,21 @@ body.touch.playing #touch { display: block; }
 }
 .on-code .acc-btn.mini { height: 32px; font-size: 12px; }
 
+/* 邀请链接 / 手动服务器地址 */
+.on-invite { margin: 0 0 10px; }
+.on-invite label { font-size: 11px !important; }
+.on-invite input,
+.on-server input {
+  min-width: 0;
+  font-size: 11px !important;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+}
+.on-invite input { color: #2F5F96; background: rgba(255, 255, 255, 0.95); }
+.on-server { margin: 10px 0 0; padding-top: 9px; border-top: 1px dashed rgba(70, 50, 32, 0.18); }
+.on-server label { font-size: 10.5px !important; }
+.on-server .acc-btn.mini { height: 34px; }
+
 .on-levels {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -1,5 +1,10 @@
 /* 纸片勇者 — 联机面板（DOM 覆盖层）
  * 建房 / 进房 / 选赛道 / 开赛，界面复用纸片风格的 .acc-* 样式。
+ *
+ * 联机拓扑：房主那台电脑跑 tools/net_server.py 当服务器，
+ * tools/tunnel.py 用 Cloudflare 快速隧道把它映射到公网。
+ * 设备 A / 设备 B 不用在同一个局域网：都打开同一个隧道地址（或游戏厅页面 + ?server=），
+ * 连到同一台服务器、进同一个 4 位房号即可，最多 4 人。
  */
 (function (PH) {
   const esc = (s) =>
@@ -19,6 +24,8 @@
     busy: false,
     msg: '',
     msgType: '',
+    pendingRoom: '',
+    _inviteDone: false,
 
     init() {
       this.el = document.getElementById('online');
@@ -36,6 +43,26 @@
       });
       PH.Net.on = (type, data) => this.onNet(type, data);
       this.level = LEVELS()[0] || '1-1';
+      try {
+        const q = new URLSearchParams(location.search);
+        this.pendingRoom = (q.get('room') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+      } catch (e) {}
+    },
+
+    // 由 game.js 等服务探测完成后调用：朋友点开邀请链接就自动进房
+    consumeInvite() {
+      if (!this.pendingRoom || this._inviteDone) return;
+      this._inviteDone = true;
+      const room = this.pendingRoom;
+      this.open();
+      this.mode = 'home';
+      this.msg = '正在通过邀请链接加入房间 ' + room + '…';
+      this.render();
+      setTimeout(() => {
+        const input = document.getElementById('onCode');
+        if (input) input.value = room;
+        this.join();
+      }, 160);
     },
 
     open() {
@@ -93,32 +120,47 @@
       const N = PH.Net;
       if (this.mode === 'home') {
         this.title.textContent = '联机竞速';
-        this.lead.textContent = '两台设备跑同一张图，谁先到终点谁赢';
+        this.lead.textContent = '本机当服务器 · 两台设备不用在同一个网络';
         this.body.innerHTML = this.homeHtml();
         this.foot.innerHTML = this.originHint();
       } else if (this.mode === 'room') {
         const host = N.isHost();
         this.title.textContent = '房间 ' + esc(N.room);
-        this.lead.textContent = host ? '把房号报给朋友，等他进来就能开赛' : '等房主开始比赛';
+        this.lead.textContent = host ? '把邀请链接发给朋友，等他进来就能开赛' : '等房主开始比赛';
         this.body.innerHTML = this.roomHtml(host);
         this.foot.textContent = N.players.length + ' / 4 人 · 延迟 ' + (N.rtt ? N.rtt + ' ms' : '—');
       } else {
         this.title.textContent = '联机不上';
-        this.lead.textContent = '先把联机服务打开再试一次';
+        this.lead.textContent = '先把那台电脑上的服务器打开再试一次';
         this.body.innerHTML =
           '<p class="acc-msg err">' + esc(N.error || '连不上联机服务') + '</p>' +
           '<button class="acc-btn primary" data-act="retry">再试一次</button>' +
-          '<p class="acc-tip">在游戏目录里双击「启动游戏.command」，它会同时开好网页和联机服务；' +
-          '如果是另一台设备，用房间面板底下那个地址打开。</p>';
+          '<p class="acc-tip">联机由<b>房主那台电脑当服务器</b>，通过 Cloudflare 内网穿透连到公网，' +
+          '设备 A 和设备 B <b>不用在同一个局域网</b>。<br>' +
+          '让房主双击「启动游戏.command」或运行 <b>python3 tools/tunnel.py</b>；' +
+          '如果隧道地址刚变过，把房主发来的邀请链接打开，或把服务器地址贴到下面再连一次。</p>' +
+          this.serverField() +
+          '<p class="acc-msg" id="onMsg"></p>';
         this.foot.textContent = '';
       }
       this.wire();
     },
 
     originHint() {
-      const http = location.protocol === 'http:' || location.protocol === 'https:';
-      if (!http) return '联机需要先启动服务：双击「启动游戏.command」';
-      return '同一 Wi-Fi 下，让朋友用这个地址打开：<b>' + esc(location.origin) + '</b>';
+      const ep = (PH.Hub && PH.Hub.endpoint) || '';
+      if (!ep) return '本机电脑当服务器 · 走内网穿透，跨网也能联机';
+      return '当前服务器：<b>' + esc(ep) + '</b> · 设备 A / B 不在同一网络也能进同一个房间';
+    },
+
+    // 手动指定服务器：Pages 上的地址表还没刷新、或隧道刚换地址时用它兜底
+    serverField() {
+      const v = PH.Hub && PH.Hub.manual ? PH.Hub.manual() : '';
+      return (
+        '<div class="acc-field on-server"><label>服务器地址（邀请链接会自动填好，一般不用改）</label>' +
+        '<div class="acc-inline">' +
+        '<input id="onServer" autocomplete="off" spellcheck="false" placeholder="留空 = 自动寻找" value="' + esc(v) + '" />' +
+        '<button class="acc-btn mini" data-act="server">连接</button></div></div>'
+      );
     },
 
     homeHtml() {
@@ -127,10 +169,13 @@
       const down = hub.status === 'offline';
       if (down) {
         return (
-          '<p class="acc-msg err">联机服务现在是关着的</p>' +
-          '<p class="acc-tip">这台电脑上的小服务没开（或者隧道断了），所以联机房间先停用。<br>' +
-          '单机关卡、双人同屏都不受影响，照常能玩。<br>' +
-          '要联机就在那台电脑上跑 <b>tools/tunnel.sh</b>，它会自己把新地址同步到 GitHub。</p>' +
+          '<p class="acc-msg err">那台电脑上的联机服务现在是关着的</p>' +
+          '<p class="acc-tip">联机由<b>房主的电脑当服务器</b>，Cloudflare 隧道把它连到公网，' +
+          '所以两台设备 <b>不用在同一个局域网</b>，用流量 / 别的 Wi-Fi 都行。<br>' +
+          '让房主在那台电脑上双击「启动游戏.command」（或运行 <b>python3 tools/tunnel.py</b>），' +
+          '它会自动开两条隧道并把新地址同步到游戏厅。<br>' +
+          '单机关卡、双人同屏不受影响，照常能玩。</p>' +
+          this.serverField() +
           '<button class="acc-btn ghost" data-act="retry">重新检测</button>'
         );
       }
@@ -141,8 +186,36 @@
         '<input id="onCode" maxlength="4" autocomplete="off" spellcheck="false" placeholder="4 位房号" value="' + esc(last) + '" />' +
         '<button class="acc-btn mini" data-act="join">加入</button></div></div>' +
         '<p class="acc-msg' + (this.msgType === 'err' ? ' err' : '') + '" id="onMsg">' + esc(this.msg) + '</p>' +
-        '<p class="acc-tip">联机只在这台电脑所在的局域网里。开服务的那台电脑建房，其他设备用上面的地址打开游戏、输入房号就能进来。最多 4 个人一起跑。</p>'
+        '<p class="acc-tip"><b>跨网联机：</b>房主建好房后点「复制邀请链接」发给朋友，' +
+        '朋友不管在哪个网络，打开链接就会自动连到这台电脑并进房；' +
+        '也可以把房号报给他，让他打开同一个游戏网址手动输入。最多 4 个人一起跑。</p>' +
+        this.serverField()
       );
+    },
+
+    // 从健康端点里挑一个公网地址。房主在 localhost 建房时绝不能把 localhost 发给朋友
+    isLocal(u) {
+      const s = String(u || '').replace(/^https?:\/\//i, '').toLowerCase();
+      return !s || /^(localhost|127\.0\.0\.1|\[::1\]|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(s);
+    },
+
+    publicEndpoint() {
+      const eps = (PH.Hub && PH.Hub.endpoints) || [];
+      const pub = eps.find((u) => !this.isLocal(u));
+      if (pub) return pub;
+      const m = PH.Hub && PH.Hub.manual ? PH.Hub.manual() : '';
+      return this.isLocal(m) ? '' : m;
+    },
+
+    // 邀请链接直接用隧道地址当页面地址：页面和 /ws 同源，最稳，也不依赖 Pages 是否刷新。
+    // 隧道没开时不带 server=，让朋友走自动发现（避免误连到他自己电脑的 localhost）。
+    inviteUrl() {
+      const pub = this.publicEndpoint();
+      const base = pub ? pub + '/' : location.href.split('#')[0].split('?')[0];
+      const q = [];
+      if (pub) q.push('server=' + encodeURIComponent(pub));
+      q.push('room=' + encodeURIComponent(PH.Net.room || ''));
+      return base + '?' + q.join('&');
     },
 
     roomHtml(host) {
@@ -184,9 +257,20 @@
           '</div>';
       }
 
+      const hasPub = !!this.publicEndpoint();
+      const invite =
+        '<div class="acc-field on-invite"><label>' +
+        (hasPub
+          ? '邀请链接 · 朋友不用和你在同一个网络'
+          : '邀请链接 · 隧道没开，这条只在同一个网络里有效；跨网请让房主运行 tools/tunnel.py') +
+        '</label>' +
+        '<div class="acc-inline"><input id="onInvite" readonly value="' + esc(this.inviteUrl()) + '" />' +
+        '<button class="acc-btn mini" data-act="invite">复制</button></div></div>';
+
       return (
         '<div class="on-code"><span>房号</span><b>' + esc(N.room) + '</b>' +
-        '<button class="acc-btn mini" data-act="copy">复制</button></div>' +
+        '<button class="acc-btn mini" data-act="copy">复制房号</button></div>' +
+        invite +
         '<div class="acc-label">玩家 ' + N.players.length + ' / 4</div>' +
         '<div class="acc-list">' + rows + '</div>' +
         (host
@@ -205,15 +289,20 @@
           if (act === 'create') this.create();
           else if (act === 'join') this.join();
           else if (act === 'copy') this.copy();
+          else if (act === 'invite') this.copyInvite();
+          else if (act === 'server') this.applyServer();
           else if (act === 'start') this.startRace();
           else if (act === 'leave') this.leave();
           else if (act === 'retry') {
+            PH.Net.reset();
             PH.Net.status = 'idle';
             this.mode = 'home';
+            this.msg = '正在重新检测服务器…';
             this.render();
             if (PH.Hub) {
               PH.Hub.discover().then((ok) => {
                 this.mode = ok ? 'home' : 'error';
+                this.msg = '';
                 this.render();
               });
             } else {
@@ -241,6 +330,12 @@
         });
         setTimeout(() => code.focus(), 80);
       }
+      const srv = document.getElementById('onServer');
+      if (srv) {
+        srv.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') this.applyServer();
+        });
+      }
     },
 
     flash(text, isErr) {
@@ -251,6 +346,28 @@
         m.textContent = this.msg;
         m.className = 'acc-msg' + (isErr ? ' err' : '');
       }
+    },
+
+    applyServer() {
+      const input = document.getElementById('onServer');
+      const v = input ? input.value.trim() : '';
+      if (PH.Hub && PH.Hub.setManual) PH.Hub.setManual(v);
+      PH.Net.reset();
+      this.busy = true;
+      this.flash(v ? '正在连接 ' + v + ' …' : '正在重新寻找服务器…', false);
+      if (!PH.Hub) {
+        this.busy = false;
+        return;
+      }
+      PH.Hub.discover().then((ok) => {
+        this.busy = false;
+        this.mode = ok ? 'home' : 'error';
+        this.render();
+        this.flash(
+          ok ? '服务器已连上：' + PH.Hub.endpoint : '连不上这个服务器，检查地址，或让房主重启隧道后重发邀请链接',
+          !ok
+        );
+      });
     },
 
     create() {
@@ -267,7 +384,7 @@
     join() {
       if (this.busy) return;
       const input = document.getElementById('onCode');
-      const code = (input ? input.value : '').trim().toUpperCase();
+      const code = (input ? input.value : this.pendingRoom || '').trim().toUpperCase();
       if (code.length !== 4) {
         this.flash('房号是 4 位，再检查一下', true);
         return;
@@ -290,10 +407,27 @@
       } else this.flash('房号：' + code, false);
     },
 
+    copyInvite() {
+      const input = document.getElementById('onInvite');
+      const url = input ? input.value : this.inviteUrl();
+      if (input) {
+        input.select();
+        input.setSelectionRange(0, url.length);
+      }
+      const done = () => this.flash('邀请链接已复制，发给朋友就能跨网进房', false);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done).catch(() => {
+          try { document.execCommand('copy'); done(); } catch (e) { this.flash('请手动复制上面的链接', true); }
+        });
+      } else {
+        try { document.execCommand('copy'); done(); } catch (e) { this.flash('请手动复制上面的链接', true); }
+      }
+    },
+
     startRace() {
       if (!PH.Net.isHost()) return;
       if (PH.Net.players.length < 2) {
-        this.flash('至少两个人才能开赛，把房号发给朋友吧', true);
+        this.flash('至少两个人才能开赛，把邀请链接发给朋友吧', true);
         return;
       }
       PH.Net.relay({ k: 'start', level: this.level });
