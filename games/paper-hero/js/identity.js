@@ -188,6 +188,8 @@
     },
     serverLabel() {
       const ep = (PH.Hub && PH.Hub.endpoint) || '';
+      const cloud = PH.Hub && PH.Hub.cloudUrl ? PH.Hub.cloudUrl() : '';
+      if (cloud && ep === cloud) return 'Cloudflare';
       return /workers\.dev\/?$/i.test(ep) ? 'Cloudflare' : '本机服务器';
     },
     setServerSession(name) {
@@ -355,7 +357,7 @@
         }
       }
       if (!ok || !cred) {
-        return { ok: false, msg: this.serverLabel() + ' 上还没有这个账号；请先在房主电脑登录一次' };
+        return { ok: false, msg: this.serverLabel() + ' 上还没有这个账号；请先到游戏厅主页注册，或用已有账号登录' };
       }
       const r = await this.serverJson('/api/account/import', {
         name: cred.name,

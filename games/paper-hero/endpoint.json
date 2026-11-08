@@ -1,10 +1,9 @@
 {
- "updated": 1794146965360,
+ "updated": 1794147000000,
  "endpoints": [
-  "https://providers-asus-mag-jenny.trycloudflare.com",
-  "https://people-italic-study-textbook.trycloudflare.com"
+  "https://paper-hero.ghbqu.dpdns.org"
  ],
- "note": "本机服务 + Cloudflare 快速隧道（隧道换址时由启动脚本自动更新）",
+ "note": "Cloudflare Worker 常驻主服务器；不需要任何人的电脑开机",
  "github": "https://raw.githubusercontent.com/GHBQU/game/main/games/paper-hero/endpoint.json",
  "gameUrl": "https://xn--29s3l.xn--0iv.gay/games/paper-hero/"
 }

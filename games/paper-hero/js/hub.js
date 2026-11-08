@@ -65,6 +65,18 @@
       }
     },
 
+    // 只有「本次页面 URL 上带的 ?server=」才算邀请指定。
+    // localStorage 里残留的旧隧道 / 本机地址不再抢 Cloudflare 的优先级，
+    // 否则老用户会被一条已经关机的本机服务拖住，联机又变成「必须开机」。
+    manualFromUrl() {
+      try {
+        const q = new URLSearchParams(location.search);
+        return this.normalize(q.get('server') || q.get('s') || '');
+      } catch (e) {
+        return '';
+      }
+    },
+
     setManual(u) {
       const v = this.normalize(u);
       try {
@@ -157,6 +169,14 @@
 
     /* ---------------- 端点发现 ---------------- */
     async loadCandidates() {
+      const cloud = this.cloudUrl();
+      const fromUrl = this.manualFromUrl();
+      // Cloudflare 在线时直接收工：不读 GitHub 地址表、不探旧隧道、不探本机服务。
+      // 这样开局只要一次探活，也彻底不会因为一条已经关机的隧道拖慢或选错服务器。
+      if (cloud && !fromUrl) {
+        const ok = await this.probe(cloud, 2200);
+        if (ok) return [cloud];
+      }
       const list = [];
       const manual = this.manual();
       const here = location.protocol === 'http:' || location.protocol === 'https:' ? location.origin : '';
@@ -178,9 +198,9 @@
       // 页面本身就由那台服务发出时，同源地址已经在列表里，别再塞一个等价的 localhost 造成两端选路不一致
       const hereIsServer = !!here && !/\/games\//.test(location.pathname) && /^(localhost|127\.0\.0\.1)/.test(location.hostname);
       if (!manual && localHost && !hereIsServer) list.push('http://localhost:8777');
-      const cloud = this.cloudUrl();
       if (cloud) list.unshift(cloud);
-      if (manual) list.unshift(manual);
+      // 只有当前 URL 明确指定的服务器才排在 Cloudflare 前面（保证老邀请链接仍能对上同一个房间）
+      if (fromUrl && fromUrl !== cloud) list.unshift(fromUrl);
       const out = [];
       list.forEach((u) => {
         if (u && out.indexOf(u) < 0) out.push(u);
@@ -252,18 +272,21 @@
         this.endpoint = '';
         this.serverId = '';
         this.rtt = 0;
-        this.lastError = 'Cloudflare / 本机服务都没连上，联机关掉；账号改用离线密钥验证';
+        this.lastError = '连不上 Cloudflare 服务器，联机暂时关闭；账号改用离线密钥验证';
         this.loadAccount();
         this.emit('change');
         return false;
       }
-      // 两台设备必须连同一台服务器，房号才对得上：
-      // 邀请链接 / 手动指定 > Cloudflare 固定地址 > 最快端点（本机隧道兜底）
-      const manual = this.manual();
-      const forced = manual && hits.find((h) => h.ep === manual);
+      // 两台设备必须连同一台服务器，房号才对得上。
+      // 顺序：本次邀请链接指定的服务器 > Cloudflare 固定地址 > 旧的本机/隧道兜底。
+      // localStorage 里的旧地址已经降级，不会再让「房主电脑必须开机」复活。
+      const fromUrl = this.manualFromUrl();
+      const forced = fromUrl && hits.find((h) => h.ep === fromUrl);
       const cloud = this.cloudUrl();
       const cloudHit = cloud && hits.find((h) => h.ep === cloud);
-      const best = forced || cloudHit || hits[0];
+      const stale = this.manual();
+      const staleHit = stale && hits.find((h) => h.ep === stale);
+      const best = forced || cloudHit || staleHit || hits[0];
       this.endpoint = best.ep;
       this.endpoints = hits.map((h) => h.ep);
       this.serverId = (best.info && best.info.sid) || '';
@@ -320,7 +343,8 @@
           // 隧道换地址：看 GitHub 地址表里有没有没见过的新地址
           const f = await this.readFeeds();
           const fresh = f.endpoints.some((u) => (this.candidates || []).indexOf(u) < 0);
-          if (fresh) {
+          // 已经连着 Cloudflare 时，地址表里的旧隧道变化与我们无关
+          if (fresh && this.endpoint !== this.cloudUrl()) {
             if (!(PH.Net && PH.Net.room)) await this.discover();
             return;
           }
@@ -341,7 +365,13 @@
     // 联机中途掉线：换下一个健康端点；都不行就重读 endpoint.json
     async failover(badEndpoint) {
       const rest = (this.endpoints || []).filter((e) => e !== badEndpoint);
-      const hits = (await Promise.all(rest.map((e) => this.probe(e, 2000)))).filter(Boolean);
+      // 掉线重连也要先回 Cloudflare，别切到朋友自己电脑上的旧本机服务，
+      // 否则两边会连到不同的服务器、房号对不上。
+      const cloud = this.cloudUrl();
+      const order = cloud && rest.indexOf(cloud) >= 0
+        ? [cloud].concat(rest.filter((e) => e !== cloud))
+        : rest;
+      const hits = (await Promise.all(order.map((e) => this.probe(e, 2000)))).filter(Boolean);
       if (hits.length) {
         this.endpoint = hits[0].ep;
         this.serverId = (hits[0].info && hits[0].info.sid) || this.serverId;

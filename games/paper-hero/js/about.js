@@ -6,8 +6,18 @@
   /* ---------------- 更新日志 ---------------- */
   const LOG = [
     {
+      v: 'v1.9.4',
+      date: '最新 · 联机彻底上云',
+      items: [
+        'Cloudflare 在线时直接进入联机：不再读 GitHub 地址表、不再探本机服务，开局只要一次探活。',
+        '本机浏览器里残留的旧隧道 / 本机服务器地址降级为最后兜底，断线重连也优先切回 Cloudflare。',
+        '邀请链接和 endpoint.json 固定指向 Cloudflare，旧缓存页面、换设备、房主关机都进同一个房间。',
+        '联机面板、错误提示、账号提示全部改为云端说明，不再提示「启动本机服务 / 运行 tunnel.py」。',
+      ],
+    },
+    {
       v: 'v1.9.3',
-      date: '最新 · Cloudflare 联机',
+      date: 'Cloudflare 联机',
       items: [
         '联机房间与 WebSocket 转发迁到 Cloudflare Worker + Durable Object，不再依赖房主电脑一直开机；手机 / 平板 / 异地打开固定网址就能进同一个房间。',
         '账号摘要与存档也迁到 Cloudflare 的 Durable Object 存储，换设备用同一个账号登录即可读到云存档。',

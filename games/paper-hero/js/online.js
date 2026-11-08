@@ -1,11 +1,10 @@
 /* 纸片勇者 — 联机面板（DOM 覆盖层）
  * 建房 / 进房 / 选赛道 / 开赛，界面复用纸片风格的 .acc-* 样式。
  *
- * 联机拓扑：房主那台电脑跑 tools/net_server.py 当服务器，
- * tools/tunnel.py 用 Cloudflare 快速隧道把它映射到公网，并把地址写到 GitHub。
+ * 联机拓扑：Cloudflare Worker + Durable Object 常驻在公网，房主电脑不用开机。
  * 手机 / 平板 / 别的电脑各自用流量或任意 Wi-Fi 打开「固定游戏网址」，
- * 都会读到同一个隧道地址、连回同一台服务器、进同一个 4 位房号，最多 4 人。
- * 互相之间不需要在同一个局域网，也不需要跟服务器在同一个局域网。
+ * 都会连到同一个 Cloudflare 端点、进同一个 4 位房号，最多 4 人。
+ * 互相之间不需要在同一个局域网；旧的本机服务 + 快速隧道只作为可选兜底。
  */
 (function (PH) {
   const esc = (s) =>
@@ -132,14 +131,14 @@
         this.foot.textContent = N.players.length + ' / 4 人 · 延迟 ' + (N.rtt ? N.rtt + ' ms' : '—');
       } else {
         this.title.textContent = '联机不上';
-        this.lead.textContent = '先把那台电脑上的服务器打开再试一次';
+        this.lead.textContent = '连不上 Cloudflare 服务器，稍后再试一次';
         this.body.innerHTML =
           '<p class="acc-msg err">' + esc(N.error || '连不上联机服务') + '</p>' +
           '<button class="acc-btn primary" data-act="retry">再试一次</button>' +
-          '<p class="acc-tip">联机<b>只需要房主那台电脑的服务器开着</b>：Cloudflare 内网穿透把它连到公网，' +
-          '手机用流量、平板连别的 Wi-Fi、电脑在别的城市，彼此不需要在同一个局域网。<br>' +
-          '让房主双击「启动游戏.command」或运行 <b>python3 tools/tunnel.py</b>，' +
-          '隧道换地址时脚本会自动更新 GitHub；<b>这个页面会自己重连，不用刷新</b>。</p>' +
+          '<p class="acc-tip">联机跑在 <b>Cloudflare 上，不需要任何人的电脑开机</b>：' +
+          '手机用流量、平板连别的 Wi-Fi、电脑在别的城市，彼此不在同一个局域网也能进同一个房间。<br>' +
+          '现在多半是网络暂时连不上 Cloudflare；<b>这个页面会自己重连，不用刷新</b>。' +
+          '单机关卡照常能玩。</p>' +
           this.serverField() +
           '<p class="acc-msg" id="onMsg"></p>';
         this.foot.textContent = '';
@@ -149,11 +148,11 @@
 
     originHint() {
       const ep = (PH.Hub && PH.Hub.endpoint) || '';
-      if (!ep) return '本机电脑当服务器 · 走内网穿透，跨网也能联机';
+      if (!ep) return 'Cloudflare 常驻服务器 · 不需要任何人的电脑开机';
       return '当前服务器：<b>' + esc(ep) + '</b> · 设备 A / B 不在同一网络也能进同一个房间';
     },
 
-    // 手动指定服务器：Pages 上的地址表还没刷新、或隧道刚换地址时用它兜底
+    // 手动指定服务器：只在调试或临时换服务器时才需要动，普通玩家留空即可
     serverField() {
       const v = PH.Hub && PH.Hub.manual ? PH.Hub.manual() : '';
       return (
@@ -170,12 +169,11 @@
       const down = hub.status === 'offline';
       if (down) {
         return (
-          '<p class="acc-msg err">那台电脑上的联机服务现在是关着的</p>' +
-          '<p class="acc-tip"><b>只要房主那台电脑的服务器开着就行。</b>Cloudflare 隧道把它连到公网，' +
+          '<p class="acc-msg err">暂时连不上 Cloudflare 联机服务器</p>' +
+          '<p class="acc-tip">联机服务跑在 <b>Cloudflare 上，不需要房主电脑开机</b>：' +
           '手机用流量、平板连别的 Wi-Fi、另一台电脑在别的网络，三台设备互相不在同一个局域网也能进同一个房间。<br>' +
-          '让房主双击「启动游戏.command」（或运行 <b>python3 tools/tunnel.py</b>），' +
-          '它会自动开两条隧道并把新地址同步到 GitHub。<br>' +
-          '<b>这个页面会一直自动重连</b>，服务器开起来后不用刷新、不用重新要链接；单机关卡照常能玩。</p>' +
+          '现在多半是本机网络暂时访问不了 Cloudflare，换个网络或稍等一下即可。<br>' +
+          '<b>这个页面会一直自动重连</b>，恢复后不用刷新、不用重新要链接；单机关卡照常能玩。</p>' +
           this.serverField() +
           '<button class="acc-btn ghost" data-act="retry">重新检测</button>'
         );
@@ -188,8 +186,8 @@
         '<button class="acc-btn mini" data-act="join">加入</button></div></div>' +
         '<p class="acc-msg' + (this.msgType === 'err' ? ' err' : '') + '" id="onMsg">' + esc(this.msg) + '</p>' +
         '<p class="acc-tip"><b>跨网联机：</b>房主建好房后把「邀请链接」或「固定网址 + 房号」发给朋友。' +
-        '手机、平板、另一台电脑不管各自在哪个网络，打开就会自动连到这台服务器并进房。' +
-        '隧道地址每次会变，启动脚本都会自动更新 GitHub，固定网址不会失效。最多 4 个人一起跑。</p>' +
+        '手机、平板、另一台电脑不管各自在哪个网络，打开就会自动连到同一个 Cloudflare 房间。' +
+        '<b>服务器常驻云端，不需要房主电脑开机，地址也不会变</b>；最多 4 个人一起跑。</p>' +
         this.serverField()
       );
     },
@@ -229,10 +227,12 @@
     },
 
     inviteUrl() {
-      const pub = this.publicEndpoint();
+      // Cloudflare 地址固定，邀请链接永远指向同一个服务器，
+      // 不能让一条碰巧更快、但随时会关机的旧本机隧道混进 server= 里。
+      const cloud = PH.Hub && PH.Hub.cloudUrl ? PH.Hub.cloudUrl() : '';
+      const pub = cloud || this.publicEndpoint();
       const base = this.fixedUrl().replace(/\?.*$/, '');
       const q = [];
-      // server= 只是「马上能连」的快车道；这条隧道要是换了，会自动回退到 GitHub 上的新地址
       if (pub) q.push('server=' + encodeURIComponent(pub));
       q.push('room=' + encodeURIComponent(PH.Net.room || ''));
       return base + (base.indexOf('?') >= 0 ? '&' : '?') + q.join('&');
@@ -283,7 +283,7 @@
         '<div class="acc-field on-invite"><label>' +
         (hasPub
           ? '邀请链接 · 手机 / 平板 / 别的电脑，各自用流量或任意 Wi-Fi 都能进'
-          : '邀请链接 · 隧道没开，跨网请让房主运行 tools/tunnel.py') +
+          : '邀请链接 · 当前网络连不上 Cloudflare，恢复后可直接进') +
         '</label>' +
         '<div class="acc-inline"><input id="onInvite" readonly value="' + esc(this.inviteUrl()) + '" />' +
         '<button class="acc-btn mini" data-act="invite">复制</button></div>' +
@@ -293,9 +293,9 @@
           ? '<button class="acc-btn ghost mini on-backup" data-act="backup">备用网址 · ' +
             esc(this.hostOf(this.backupUrl())) + '</button>'
           : '') +
-        '<p class="acc-tip on-cross">固定网址永远不变：隧道一换地址，启动脚本就自动更新 GitHub，' +
+        '<p class="acc-tip on-cross">固定网址和 Cloudflare 服务器地址都永远不变，' +
         '朋友不用重新要链接，只报个房号也能进。<br>' +
-        '<b>只要这台服务器开着，三台设备彼此不在同一个局域网也照样联机。</b></p>' +
+        '<b>服务器在云端常驻，房主电脑关机也不影响，三台设备彼此不在同一个局域网也照样联机。</b></p>' +
         '</div>';
 
       return (
@@ -397,7 +397,7 @@
         this.mode = ok ? 'home' : 'error';
         this.render();
         this.flash(
-          ok ? '服务器已连上：' + PH.Hub.endpoint : '连不上这个服务器，检查地址，或让房主重启隧道后重发邀请链接',
+          ok ? '服务器已连上：' + PH.Hub.endpoint : '连不上 Cloudflare 服务器，检查网络后会自动重连',
           !ok
         );
       });
