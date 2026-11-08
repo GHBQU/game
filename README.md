@@ -10,15 +10,15 @@
 | 02 | 暗夜幸存者 | 顶视角生存射击 |
 | 03 | 纸片勇者 | 手绘纸片横版闯关，8 关 + 双人同屏 + 最多 4 人联机 |
 
-### 纸片勇者的联机怎么跑到公网
+### 联机怎么跑到公网
 
-游戏本身是纯静态的，联机靠**小宇这台电脑上的服务**：
+联机默认走 **Cloudflare Worker + Durable Object**，不用开小宇这台电脑：
 
-1. 本机跑 `tools/tunnel.py`：起 `net_server.py`（游戏服务 + WebSocket 房间），再开两条 Cloudflare 快速隧道（主 + 备）。
-2. 隧道地址每次重启都会变，脚本会把新地址写进 `games/paper-hero/endpoint.json` 并 `git push`，
-   GitHub Pages 随即自动重建——**不需要手工改任何地址**。
-3. 页面启动时读 `endpoint.json`，并发探活所有地址，挑最快的那个连；一条断了自动换另一条。
-4. 服务没开 → 探测失败 → 游戏自动关掉「联机」和账号，退回纯单机，其余功能不受影响。
+1. 房间 WebSocket、账号摘要、存档都在 `cloudflare/src/index.js` 的 `GameServer` DO 里。
+2. 纸片勇者的固定地址写在 `games/paper-hero/js/cloud.js`；
+   暗夜幸存者直接连同一个 Worker。
+3. 本机 `tools/net_server.py` + 快速隧道只作为可选兜底，Cloudflare 正常时完全用不到。
+4. Cloudflare 也不可用时，纸片勇者会退回旧的隧道地址；暗夜幸存者会提示联机服务离线。
 
 ## 视觉风格
 
@@ -43,7 +43,7 @@
 ├── index.html                    # 主页（五套样式全部内联）
 ├── arcade.js                     # 账号、邀请码、防沉迷时间窗、游戏页守卫
 ├── holidays.js                   # 法定节假日 / 调休上班日 / 寒暑假数据
-├── CNAME                         # 自定义域名 小宇.gay
+├── CNAME                         # 自定义域名 小宇.是.gay
 ├── .nojekyll                     # 关闭 Jekyll 处理
 ├── esp32/                        # 用 ESP32 自己当服务器（见 esp32/README.md）
 │   ├── main.py                   #   WiFi + HTTP 服务 + 静态文件
@@ -66,7 +66,7 @@
 
 | | 账号存哪 | 谁提供页面 | 需要常开什么 |
 |---|---|---|---|
-| **GitHub Pages**（小宇.gay） | 访客自己的浏览器 | GitHub | 无 |
+| **GitHub Pages**（小宇.是.gay） | 访客自己的浏览器 | GitHub | 无 |
 | **自己的 ESP32** | 板子 flash | 板子 | 只要板子 + 路由器 |
 
 同一份 `index.html` 两边通用：`<meta name="arcade-api" content="local">` 决定走哪种。ESP32 发站时会把它改写成 `same-origin`，前端自动改调 `/api/*`。详见 [esp32/README.md](esp32/README.md)。

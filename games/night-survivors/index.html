@@ -129,6 +129,37 @@
     .hud{padding:10px}
   }
 
+  /* ---------- 联机合作 ---------- */
+  .coop-field{margin-bottom:12px}
+  .coop-field label{display:block;font-size:11px;color:var(--dim);margin-bottom:6px;letter-spacing:.06em}
+  .coop-field input,.coop-join input{width:100%;padding:12px 13px;border-radius:10px;border:1px solid var(--line-strong);
+    background:var(--panel-2);color:var(--text);font:inherit;font-size:14px;outline:none}
+  .coop-field input:focus,.coop-join input:focus{border-color:var(--accent)}
+  .coop-join{display:flex;gap:8px;margin-top:10px}
+  .coop-join input{flex:1;text-transform:uppercase;letter-spacing:.18em;text-align:center}
+  .coop-join .btn{width:auto;margin:0;white-space:nowrap}
+  .coop-room-head{display:flex;align-items:baseline;gap:10px;font-size:12px;color:var(--dim);margin:6px 0 14px}
+  .coop-room-head b{font-size:28px;letter-spacing:.18em;color:var(--gold);font-variant-numeric:tabular-nums}
+  .coop-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+  .coop-player{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:var(--panel-2);
+    border:1px solid var(--line);font-size:13px}
+  .coop-player .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .coop-player .tag{margin-left:auto;font-size:10px;color:var(--dim);letter-spacing:.08em}
+  .coop-player.me{border-color:rgba(124,156,255,.45)}
+  .coop-msg{min-height:18px;color:var(--danger);font-size:12px;text-align:center}
+  #hud-team{position:absolute;right:14px;top:64px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none}
+  .team-row{display:flex;align-items:center;gap:7px;padding:4px 9px;border-radius:999px;background:rgba(20,26,44,.78);
+    border:1px solid var(--line);font-size:11px;color:var(--muted);backdrop-filter:blur(8px)}
+  .team-row b{color:var(--text);font-weight:600;max-width:82px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .team-row .hp{width:42px;height:5px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+  .team-row .hp i{display:block;height:100%;border-radius:3px;background:var(--hp)}
+  .team-row.down{border-color:rgba(255,107,122,.55)}
+  .team-row.down b{color:var(--danger)}
+  #revive-tip{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);padding:7px 14px;border-radius:999px;
+    background:rgba(255,107,122,.14);border:1px solid rgba(255,107,122,.5);color:#ffb3bd;font-size:12px;
+    pointer-events:none;backdrop-filter:blur(8px)}
+  @media (max-width:560px){#hud-team{right:10px;top:54px}.team-row{font-size:10px;padding:3px 7px}}
+
   /* 游戏厅返回入口 */
   .arcade-back{position:fixed;left:12px;top:12px;z-index:30;display:inline-flex;align-items:center;gap:5px;
     padding:6px 11px;border-radius:8px;background:rgba(20,26,44,.82);border:1px solid rgba(255,255,255,.22);
@@ -172,6 +203,8 @@
       <div class="slots" id="hud-slots"></div>
     </div>
   </div>
+  <div id="hud-team" class="hidden"></div>
+  <div id="revive-tip" class="hidden">倒下了 · 等队友靠近</div>
 
   <!-- ================= 开始界面 ================= -->
   <div class="overlay" id="screen-start">
@@ -186,6 +219,7 @@
         <span><kbd>M</kbd></span><b>静音开关</b>
       </div>
       <button class="btn primary" id="btn-start">开始游戏</button>
+      <button class="btn" id="btn-coop">联机合作</button>
       <button class="btn" id="btn-help">玩法说明</button>
       <div class="best">
         <div>最高生存时间<b id="best-time">--:--</b></div>
@@ -203,6 +237,7 @@
       <p><b style="color:var(--text)">武器</b>：最多携带 6 把，每把可升到 8 级。当某把武器满级、且搭配了指定的被动满 5 级时，会出现<b style="color:var(--gold)">进化</b>选项——进化后的武器强度质变。</p>
       <p><b style="color:var(--text)">被动</b>：最多携带 6 个，影响伤害、冷却、范围、移速、暴击、回复等。被动和武器共享升级卡池。</p>
       <p><b style="color:var(--text)">威胁</b>：40 秒后开始出现精英怪，150 秒后出现 BOSS，之后每 3 分钟再来一次。时间越久，敌人血量与伤害越高。</p>
+      <p><b style="color:var(--text)">联机合作</b>：主菜单「联机合作」创建 / 加入 4 位房号房间，最多 4 人。共享经验与武器升级，各自一条命；倒下后队友靠近 2 秒救起，全员倒下才结束。服务器在 Cloudflare，不需要本机开服。</p>
       <p><b style="color:var(--text)">目标</b>：活得越久越好。结算会统计生存时间、击杀数、等级和总伤害。</p>
       <button class="btn primary" id="btn-help-back">返回</button>
     </div>
@@ -225,6 +260,39 @@
       <button class="btn primary" id="btn-resume">继续游戏</button>
       <button class="btn" id="btn-restart-pause">重新开始</button>
       <div class="tip">按 <kbd>空格</kbd> 或 <kbd>Esc</kbd> 继续</div>
+    </div>
+  </div>
+
+  <!-- ================= 联机合作 ================= -->
+  <div class="overlay hidden" id="screen-coop">
+    <div class="panel">
+      <h2>联机合作</h2>
+      <p>同一间房最多 4 人。共享经验与武器升级，各自一条命；倒下后队友靠近 2 秒救起，全员倒下才结束。</p>
+      <div id="coop-home">
+        <div class="coop-field"><label>你的名字</label><input id="coop-name" maxlength="10" placeholder="幸存者" /></div>
+        <button class="btn primary" id="btn-coop-create">创建房间</button>
+        <div class="coop-join">
+          <input id="coop-code" maxlength="4" placeholder="4 位房号" />
+          <button class="btn" id="btn-coop-join">加入房间</button>
+        </div>
+      </div>
+      <div id="coop-room" class="hidden">
+        <div class="coop-room-head">房号 <b id="coop-room-code">----</b></div>
+        <div class="coop-list" id="coop-players"></div>
+        <button class="btn primary" id="btn-coop-start">开始合作</button>
+        <div class="tip" id="coop-wait">等待房主开始…</div>
+        <button class="btn" id="btn-coop-leave">离开房间</button>
+      </div>
+      <p class="coop-msg" id="coop-msg"></p>
+      <button class="btn" id="btn-coop-back">返回主菜单</button>
+    </div>
+  </div>
+
+  <!-- ================= 联机等待 ================= -->
+  <div class="overlay hidden" id="screen-netwait">
+    <div class="panel">
+      <h2 id="netwait-title">房主正在选择升级</h2>
+      <p>合作模式共享升级，等房主选完就继续。</p>
     </div>
   </div>
 
@@ -280,6 +348,134 @@ function formatNum(n) {
   if (n >= 1e4) return (n / 1e3).toFixed(1) + "K";
   return String(n);
 }
+
+/* ============================ 联机桥接（Cloudflare Worker） ============================ */
+const NS_CLOUD = (function () {
+  try {
+    const q = new URLSearchParams(location.search).get("ws");
+    if (q) return q;
+  } catch (e) {}
+  return "wss://paper-hero.wyc20141215.workers.dev/ws";
+})();
+const NSNet = {
+  ws: null,
+  myId: "",
+  room: "",
+  hostId: "",
+  players: [],
+  status: "offline", // offline | connecting | lobby | playing
+  onJoined: null,
+  onPeers: null,
+  onMsg: null,
+  onErr: null,
+  onClose: null,
+  _hb: null,
+
+  connect() {
+    if (this.ws && (this.ws.readyState === 0 || this.ws.readyState === 1)) return Promise.resolve();
+    this.status = "connecting";
+    return new Promise((resolve, reject) => {
+      let ws;
+      try { ws = new WebSocket(NS_CLOUD); } catch (e) { this.status = "offline"; reject(e); return; }
+      this.ws = ws;
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        try { ws.close(); } catch (e) {}
+        this.status = "offline";
+        reject(new Error("连接超时"));
+      }, 12000);
+      ws.onopen = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        this.status = "lobby";
+        this._hb = setInterval(() => { try { ws.send(JSON.stringify({ t: "ping", ts: Date.now() })); } catch (e) {} }, 15000);
+        resolve();
+      };
+      ws.onmessage = (ev) => {
+        let m;
+        try { m = JSON.parse(ev.data); } catch (e) { return; }
+        this._handle(m);
+      };
+      ws.onerror = () => {
+        if (!settled) { settled = true; clearTimeout(timer); this.status = "offline"; reject(new Error("连不上服务器")); }
+      };
+      ws.onclose = () => {
+        clearInterval(this._hb);
+        this._hb = null;
+        const was = this.status;
+        this.ws = null;
+        this.status = "offline";
+        if (was !== "offline" && this.onClose) this.onClose();
+      };
+    });
+  },
+
+  _handle(m) {
+    if (!m || !m.t) return;
+    if (m.t === "joined") {
+      this.myId = m.id;
+      this.room = m.room;
+      this.hostId = m.hostId;
+      this.players = m.players || [];
+      this.status = "lobby";
+      if (this.onJoined) this.onJoined(m);
+      return;
+    }
+    if (m.t === "peers") {
+      this.hostId = m.hostId;
+      this.players = m.players || [];
+      if (this.onPeers) this.onPeers(m);
+      return;
+    }
+    if (m.t === "msg") {
+      if (this.onMsg) this.onMsg(m.from, m.d);
+      return;
+    }
+    if (m.t === "err") {
+      if (this.onErr) this.onErr(m);
+      return;
+    }
+    if (m.t === "left") {
+      this.room = "";
+      this.status = "offline";
+    }
+  },
+
+  async create(name) {
+    await this.connect();
+    if (!this.ws) throw new Error("没有连接");
+    this.ws.send(JSON.stringify({ t: "create", name: String(name || "幸存者").slice(0, 10) }));
+  },
+  async join(code, name) {
+    await this.connect();
+    if (!this.ws) throw new Error("没有连接");
+    this.ws.send(JSON.stringify({ t: "join", room: String(code || "").toUpperCase().slice(0, 4), name: String(name || "幸存者").slice(0, 10) }));
+  },
+  send(d) {
+    if (!this.ws || this.ws.readyState !== 1 || !this.room) return false;
+    try { this.ws.send(JSON.stringify({ t: "msg", d })); return true; } catch (e) { return false; }
+  },
+  leave() {
+    try { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ t: "leave" })); } catch (e) {}
+    try { if (this.ws) this.ws.close(); } catch (e) {}
+    clearInterval(this._hb);
+    this._hb = null;
+    this.ws = null;
+    this.room = "";
+    this.myId = "";
+    this.hostId = "";
+    this.players = [];
+    this.status = "offline";
+  },
+  isHost() { return !!this.myId && this.myId === this.hostId; },
+  nameOf(id) {
+    const p = this.players.find((x) => x.id === id);
+    return p ? p.name : "队友";
+  },
+};
 
 /* ============================ 2. 音效合成 ============================ */
 const AudioSys = {
@@ -490,7 +686,7 @@ const WEAPONS = {
       size: 5 + lv * 0.4,
     }),
     fire(g, w, s) {
-      const p = g.player;
+      const p = g.owner || g.player;
       const targets = g.nearestEnemies(p.x, p.y, 720, s.count);
       for (let i = 0; i < s.count; i++) {
         let ang;
@@ -513,7 +709,7 @@ const WEAPONS = {
     desc: "穿透一切的高速射线，命中后爆裂",
     stats: () => ({ cd: 0.24, dmg: 34, speed: 1000, count: 4, pierce: 99, size: 8 }),
     fire(g, w, s) {
-      const p = g.player;
+      const p = g.owner || g.player;
       const targets = g.nearestEnemies(p.x, p.y, 900, s.count);
       for (let i = 0; i < s.count; i++) {
         let ang = targets.length ? Math.atan2(targets[Math.min(i, targets.length - 1)].y - p.y, targets[Math.min(i, targets.length - 1)].x - p.x) : Math.random() * TAU;
@@ -537,7 +733,7 @@ const WEAPONS = {
       w.tick -= dt;
       if (w.tick > 0) return;
       w.tick = 0.3;
-      const p = g.player;
+      const p = g.owner || g.player;
       const R = s.radius * g.stats.areaMul;
       for (let i = 0; i < s.count; i++) {
         const a = w.angle + (i * TAU) / s.count;
@@ -547,7 +743,7 @@ const WEAPONS = {
       }
     },
     draw(g, w, s) {
-      const p = g.player;
+      const p = g.owner || g.player;
       const R = s.radius * g.stats.areaMul;
       const c = g.ctx;
       for (let i = 0; i < s.count; i++) {
@@ -574,11 +770,11 @@ const WEAPONS = {
       w.pulse += dt;
       if (w.tick > 0) return;
       w.tick = s.tick;
-      const p = g.player;
+      const p = g.owner || g.player;
       g.damageArea(p.x, p.y, s.radius * g.stats.areaMul, s.dmg, { color: "#ff9a4d", silent: true });
     },
     draw(g, w, s) {
-      const p = g.player;
+      const p = g.owner || g.player;
       const R = s.radius * g.stats.areaMul;
       const c = g.ctx;
       const pulse = 1 + Math.sin(w.pulse * 5) * 0.035;
@@ -599,7 +795,7 @@ const WEAPONS = {
     evolve: { passive: "area", passiveLevel: 5, into: "storm" },
     stats: (lv) => ({ cd: Math.max(0.5, 1.5 - lv * 0.11), dmg: 12 + lv * 6, count: 1 + Math.floor(lv / 3), speed: 400 + lv * 18, size: 13 + lv * 0.9, reach: 300 + lv * 16 }),
     fire(g, w, s) {
-      const p = g.player;
+      const p = g.owner || g.player;
       const targets = g.nearestEnemies(p.x, p.y, 700, s.count);
       for (let i = 0; i < s.count; i++) {
         const ang = targets.length
@@ -619,7 +815,7 @@ const WEAPONS = {
     desc: "同时掷出大量利刃，全程穿透且永不停止",
     stats: () => ({ cd: 0.6, dmg: 34, count: 6, speed: 460, size: 17, reach: 460 }),
     fire(g, w, s) {
-      const p = g.player;
+      const p = g.owner || g.player;
       for (let i = 0; i < s.count; i++) {
         const ang = (i / s.count) * TAU + Math.random() * 0.5;
         g.spawnProjectile({
@@ -637,7 +833,7 @@ const WEAPONS = {
     evolve: { passive: "area", passiveLevel: 5, into: "supernova" },
     stats: (lv) => ({ cd: Math.max(1.1, 3.4 - lv * 0.28), dmg: 16 + lv * 9, maxR: 150 + lv * 26, expand: 420 + lv * 24 }),
     fire(g, w, s) {
-      const p = g.player;
+      const p = g.owner || g.player;
       g.addShockwave(p.x, p.y, {
         maxR: s.maxR * g.stats.areaMul, expand: s.expand, dmg: s.dmg,
         color: "#7fd8ff", knock: 190,
@@ -651,7 +847,7 @@ const WEAPONS = {
     desc: "双重冰爆环，范围与伤害大幅提升",
     stats: () => ({ cd: 1.5, dmg: 78, maxR: 400, expand: 620 }),
     fire(g, w, s) {
-      const p = g.player;
+      const p = g.owner || g.player;
       g.addShockwave(p.x, p.y, { maxR: s.maxR * g.stats.areaMul, expand: s.expand, dmg: s.dmg, color: "#a8ecff", knock: 300 });
       setTimeout(() => {
         if (g.state === "playing") g.addShockwave(p.x, p.y, { maxR: s.maxR * 0.7 * g.stats.areaMul, expand: s.expand, dmg: s.dmg * 0.6, color: "#7fd8ff", knock: 200 });
@@ -665,7 +861,7 @@ const WEAPONS = {
     desc: "击中最近的敌人并在敌人之间连锁跳跃",
     stats: (lv) => ({ cd: Math.max(0.42, 1.7 - lv * 0.16), dmg: 11 + lv * 5.5, jumps: 2 + lv, range: 300, falloff: 0.86 }),
     fire(g, w, s) {
-      const p = g.player;
+      const p = g.owner || g.player;
       let srcX = p.x, srcY = p.y;
       let target = g.nearestEnemy(srcX, srcY, 560, null);
       const hitSet = [];
@@ -715,15 +911,26 @@ const ENEMIES = {
 };
 
 /* ============================ 8. 玩家 ============================ */
-function createPlayer() {
+function createPlayer(id, name, color) {
   return {
+    id: id || "", name: name || "", color: color || "#7c9cff",
     x: 0, y: 0, radius: 14, baseSpeed: 208,
-    hp: 115, level: 1, xp: 0, xpNext: 5,
+    hp: 115, maxHp: 115, level: 1, xp: 0, xpNext: 5,
     weapons: [], passives: [],
     invuln: 0, hitFlash: 0, facing: 0, moving: false, animTime: 0,
-    regenAcc: 0, dead: false,
+    regenAcc: 0, dead: false, downed: false, reviveT: 0, remote: false,
     permDamage: 0, permHp: 0,
   };
+}
+
+const NS_COLORS = ["#7c9cff", "#7ee0c0", "#ffc65c", "#ff8fa6"];
+function coopPlayer(entry, i) {
+  const p = createPlayer(entry.id, entry.name, NS_COLORS[i % NS_COLORS.length]);
+  const n = Math.max(1, NSNet.players.length);
+  const a = -Math.PI / 2 + (i / n) * TAU;
+  p.x = Math.cos(a) * 64;
+  p.y = Math.sin(a) * 64;
+  return p;
 }
 
 function baseStats() {
@@ -821,7 +1028,17 @@ class Game {
     this.particles = new Pool(createParticle);
 
     this.player = createPlayer();
+    this.players = [this.player];
+    this.owner = null;
     this.stats = computeStats(this.player);
+    this.coop = false;
+    this.netRole = null;       // host | guest
+    this.remoteInputs = {};    // guest id -> {x,y}
+    this.snapAcc = 0;
+    this.lastSnapAt = 0;
+    this.lastSnap = null;
+    this.netTime = 0;
+    this.netPaused = false;
 
     this.state = "menu";          // menu | playing | levelup | paused | dead
     this.time = 0;
@@ -863,9 +1080,7 @@ class Game {
     this.canvas.style.height = h + "px";
   }
 
-  reset() {
-    this.player = createPlayer();
-    this.stats = computeStats(this.player);
+  resetCommon() {
     this.enemies.clear(); this.projectiles.clear(); this.pickups.clear();
     this.effects.clear(); this.texts.clear(); this.particles.clear();
     this.time = 0; this.kills = 0; this.totalDamage = 0;
@@ -874,6 +1089,20 @@ class Game {
     this.eliteTimer = 35; this.bossTimer = 120; this.bossCount = 0;
     this.banner = null;
     this.camera.x = 0; this.camera.y = 0; this.camera.shake = 0;
+    this.remoteInputs = {};
+    this.snapAcc = 0;
+    this.lastSnapAt = 0;
+    this.lastSnap = null;
+    this.netPaused = false;
+  }
+
+  reset() {
+    this.coop = false;
+    this.netRole = null;
+    this.player = createPlayer();
+    this.players = [this.player];
+    this.stats = computeStats(this.player);
+    this.resetCommon();
     grantWeapon(this.player, "bolt");
     this.player.weapons[0].timer = 0.1;
   }
@@ -888,8 +1117,268 @@ class Game {
     this.showBanner("活下去", "#8ab4ff");
   }
 
+  startCoop(asHost) {
+    this.audio.init(); this.audio.resume();
+    this.coop = true;
+    this.netRole = asHost ? "host" : "guest";
+    this.resetCommon();
+    let roster = (NSNet.players || []).slice();
+    if (!roster.length) roster = [{ id: NSNet.myId || "me", name: "幸存者" }];
+    this.players = roster.map((r, i) => coopPlayer(r, i));
+    this.player = this.players.find((p) => p.id === NSNet.myId) || this.players[0];
+    for (const p of this.players) p.remote = p !== this.player;
+    this.stats = computeStats(this.player);
+    for (const p of this.players) {
+      const st = computeStats(p);
+      p.maxHp = st.maxHp;
+      p.hp = st.maxHp;
+      p.level = 1; p.xp = 0; p.xpNext = 5;
+      if (asHost) {
+        grantWeapon(p, "bolt");
+        p.weapons[0].timer = 0.1 + this.players.indexOf(p) * 0.12;
+      }
+    }
+    this.player.maxHp = this.stats.maxHp;
+    this.player.hp = this.stats.maxHp;
+    this.state = "playing";
+    this.hostAtStart = NSNet.hostId;
+    this.ui.hideAll();
+    this.ui.showHUD(true);
+    this.ui.update(this);
+    this.ui.updateTeam(this);
+    this.showBanner(asHost ? "合作开始 · 活下去" : "加入战斗", "#8ab4ff");
+    if (asHost) this.sendSnapshot(true);
+  }
+
   showBanner(text, color) {
     this.banner = { text, color, t: 2.2 };
+  }
+
+  /* ---------- 联机同步 ---------- */
+  syncCoopRoster() {
+    if (!this.coop || this.netRole !== "host") return;
+    const roster = NSNet.players || [];
+    const ids = new Set(roster.map((p) => p.id));
+    for (let i = this.players.length - 1; i >= 0; i--) {
+      const p = this.players[i];
+      if (p !== this.player && !ids.has(p.id)) this.players.splice(i, 1);
+    }
+    for (const r of roster) {
+      if (this.players.some((p) => p.id === r.id)) continue;
+      const p = coopPlayer(r, this.players.length);
+      p.remote = true;
+      p.x = this.player.x + rand(-46, 46);
+      p.y = this.player.y + rand(-46, 46);
+      p.weapons = this.player.weapons.map((w) => Object.assign({}, w, { timer: rand(0, 0.3) }));
+      p.passives = this.player.passives.map((w) => Object.assign({}, w));
+      const st = computeStats(p);
+      p.maxHp = st.maxHp;
+      p.hp = st.maxHp;
+      this.players.push(p);
+      NSNet.send({ k: "joinrun", to: r.id });
+    }
+    this.ui.updateTeam(this);
+  }
+
+  sendSnapshot(force) {
+    if (!this.coop || this.netRole !== "host" || !NSNet.room) return;
+    const now = performance.now();
+    if (!force && now - this.lastSnapAt < 60) return;
+    this.lastSnapAt = now;
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const ps = this.players.map((p) => [
+      p.id, r1(p.x), r1(p.y), Math.round(p.hp), Math.round(p.maxHp),
+      p.downed ? 1 : 0, Math.round(p.facing * 100) / 100, p.moving ? 1 : 0,
+      Math.round(p.baseSpeed * this.stats.speedMul),
+    ]);
+    const es = this.enemies.active.map((e) => [
+      r1(e.x), r1(e.y), Math.round(e.hp), Math.round(e.maxHp), e.typeId,
+      Math.round(e.rot * 100) / 100, e.hitFlash > 0 ? 1 : 0,
+    ]);
+    const bs = this.projectiles.active.map((b) => [
+      r1(b.x), r1(b.y), Math.round(b.radius * 10) / 10, b.kind, Math.round(b.rot * 100) / 100, b.color,
+    ]);
+    const us = this.pickups.active.map((g) => [
+      r1(g.x), r1(g.y), g.kind, g.value, g.radius, g.color,
+    ]);
+    const wl = this.player.weapons.map((w) => [w.id, w.level]);
+    const pl = this.player.passives.map((w) => [w.id, w.level]);
+    NSNet.send({
+      k: "s", tm: r1(this.time), lv: this.player.level, xp: r1(this.player.xp), xn: this.player.xpNext,
+      kl: this.kills, dps: Math.round(this.dps), wl, pl, ps, es, bs, us,
+      pz: this.state === "levelup" ? 1 : 0,
+    });
+  }
+
+  applySnapshot(d) {
+    if (!d || d.k !== "s") return;
+    this.netTime = d.tm || 0;
+    this.time = d.tm || 0;
+    this.kills = d.kl || 0;
+    this.dps = d.dps || 0;
+    this.player.level = d.lv || 1;
+    this.player.xp = d.xp || 0;
+    this.player.xpNext = d.xn || 5;
+    this.player.weapons = (d.wl || []).map(([id, lv]) => ({ id, level: lv, timer: 0 }));
+    this.player.passives = (d.pl || []).map(([id, lv]) => ({ id, level: lv }));
+    this.stats = computeStats(this.player);
+
+    const seen = new Set();
+    for (const row of d.ps || []) {
+      const [id, x, y, hp, maxHp, dn, fc, mv, sp] = row;
+      let p = this.players.find((q) => q.id === id);
+      if (!p) {
+        p = coopPlayer({ id, name: NSNet.nameOf(id) }, this.players.length);
+        p.remote = true;
+        p.x = x; p.y = y;
+        this.players.push(p);
+      }
+      seen.add(id);
+      p.maxHp = maxHp || p.maxHp;
+      p.hp = hp;
+      p.downed = !!dn;
+      p.facing = fc || 0;
+      p.moving = !!mv;
+      p.netSpeed = sp || p.netSpeed;
+      if (p === this.player) {
+        p.remote = false;
+        const err = dist2(p.x, p.y, x, y);
+        if (p.downed || err > 90 * 90) { p.x = x; p.y = y; }
+        else { p.x = lerp(p.x, x, 0.35); p.y = lerp(p.y, y, 0.35); }
+      } else {
+        p.tx = x; p.ty = y;
+        if (!p._snapInit) { p.x = x; p.y = y; p._snapInit = true; }
+      }
+    }
+    for (let i = this.players.length - 1; i >= 0; i--) {
+      const p = this.players[i];
+      if (p === this.player) continue;
+      if (!seen.has(p.id)) this.players.splice(i, 1);
+    }
+    if (!this.players.includes(this.player)) this.players.push(this.player);
+    this.player.maxHp = this.player.maxHp || 115;
+    this.stats.maxHp = this.player.maxHp;
+
+    this.syncNetPool(this.enemies, d.es || [], (e, row) => {
+      const def = ENEMIES[row[4]] || ENEMIES.grunt;
+      e.x = row[0]; e.y = row[1]; e.hp = row[2]; e.maxHp = row[3]; e.typeId = row[4];
+      e.radius = def.radius; e.color = def.color; e.shape = def.shape;
+      e.elite = !!def.elite; e.boss = !!def.boss; e.ranged = !!def.ranged;
+      e.rot = row[5] || 0; e.hitFlash = row[6] ? 1 : 0; e.spawnT = 1; e.dead = false;
+    });
+    this.syncNetPool(this.projectiles, d.bs || [], (b, row) => {
+      b.x = row[0]; b.y = row[1]; b.radius = row[2]; b.kind = row[3] || "bolt";
+      b.rot = row[4] || 0; b.color = row[5] || "#fff";
+      b.vx = 0; b.vy = 0; b.t = 0; b.spin = 0; b.life = 9; b.pierce = 0;
+      b.host = b.kind === "enemy"; b.dead = false;
+    });
+    this.syncNetPool(this.pickups, d.us || [], (g, row) => {
+      g.x = row[0]; g.y = row[1]; g.kind = row[2] || "xp"; g.value = row[3] || 1;
+      g.radius = row[4] || 6; g.color = row[5] || "#8ab4ff"; g.t = 0; g.dead = false;
+    });
+
+    if (d.pz) {
+      if (this.state !== "netwait") {
+        this.state = "netwait";
+        this.ui.showNetWait(true, "房主正在选择升级");
+      }
+    } else if (this.state === "netwait") {
+      this.state = "playing";
+      this.ui.showNetWait(false);
+      this.ui.showHUD(true);
+    }
+    this.ui.update(this);
+    this.ui.updateTeam(this);
+  }
+
+  syncNetPool(pool, rows, fill) {
+    const active = pool.active;
+    while (active.length < rows.length) pool.obtain();
+    for (let i = 0; i < rows.length; i++) fill(active[i], rows[i]);
+    for (let i = rows.length; i < active.length; i++) active[i].dead = true;
+    pool.sweep();
+  }
+
+  updateGuest(dt) {
+    if (this.state === "dead") {
+      this.camera.update(dt);
+      this.updateEffectsVisual(dt);
+      return;
+    }
+    if (this.state === "netwait") {
+      this.camera.update(dt);
+      return;
+    }
+    const p = this.player;
+    const mv = this.input.move;
+    if (!p.downed) {
+      const sp = p.netSpeed || p.baseSpeed * this.stats.speedMul;
+      p.x += mv.x * sp * dt;
+      p.y += mv.y * sp * dt;
+      p.moving = mv.x !== 0 || mv.y !== 0;
+      if (p.moving) { p.facing = Math.atan2(mv.y, mv.x); p.animTime += dt * 9; }
+    }
+    this.netInT = (this.netInT || 0) + dt;
+    if (this.netInT >= 0.05) {
+      this.netInT = 0;
+      NSNet.send({ k: "in", x: Math.round(mv.x * 100) / 100, y: Math.round(mv.y * 100) / 100 });
+    }
+    for (const q of this.players) {
+      if (q === this.player || q._snapInit === undefined) continue;
+      q.x = lerp(q.x, q.tx, Math.min(1, dt * 12));
+      q.y = lerp(q.y, q.ty, Math.min(1, dt * 12));
+      q.animTime += dt * 9;
+    }
+    let cam = p;
+    if (p.downed) {
+      let best = null, bd = Infinity;
+      for (const q of this.players) {
+        if (q.downed) continue;
+        const d = dist2(p.x, p.y, q.x, q.y);
+        if (d < bd) { bd = d; best = q; }
+      }
+      if (best) cam = best;
+    }
+    this.camera.follow(cam.x, cam.y, dt);
+    this.camera.update(dt);
+    this.updateTexts(dt);
+    this.updateParticles(dt);
+    this.effects.sweep(); this.texts.sweep(); this.particles.sweep();
+    if (this.banner) { this.banner.t -= dt; if (this.banner.t <= 0) this.banner = null; }
+    this.ui.update(this);
+    this.ui.updateTeam(this);
+  }
+
+  netMsg(from, d) {
+    if (!d) return;
+    if (d.k === "start") { this.startCoop(false); return; }
+    if (d.k === "joinrun" && d.to === NSNet.myId) {
+      if (!this.coop || this.state === "menu") this.startCoop(false);
+      return;
+    }
+    if (!this.coop) return;
+    if (this.netRole === "host") {
+      if (d.k === "in") {
+        this.remoteInputs[from] = { x: clamp(+d.x || 0, -1, 1), y: clamp(+d.y || 0, -1, 1) };
+      } else if (d.k === "again" && NSNet.isHost()) {
+        this.startCoop(true);
+        NSNet.send({ k: "start" });
+      }
+      return;
+    }
+    if (d.k === "s") this.applySnapshot(d);
+    else if (d.k === "lv") { this.state = "netwait"; this.ui.showNetWait(true, "房主正在选择升级"); }
+    else if (d.k === "pause") { this.state = "netwait"; this.ui.showNetWait(true, "房主暂停了"); }
+    else if (d.k === "go") { this.state = "playing"; this.ui.showNetWait(false); this.ui.showHUD(true); }
+    else if (d.k === "over") {
+      this.time = d.t || this.time; this.kills = d.kl || this.kills;
+      this.player.level = d.lv || this.player.level;
+      this.gameOver();
+    } else if (d.k === "start") {
+      this.startCoop(false);
+    } else if (d.k === "joinrun" && d.to === NSNet.myId) {
+      if (!this.coop || this.state === "menu") this.startCoop(false);
+    }
   }
 
   /* ---------- 输入回调 ---------- */
@@ -914,14 +1403,17 @@ class Game {
 
   pause() {
     if (this.state !== "playing") return;
+    if (this.coop && this.netRole === "guest") return;
     this.state = "paused";
     this.ui.showPause(this.player);
+    if (this.coop && this.netRole === "host") NSNet.send({ k: "pause" });
   }
   resume() {
     if (this.state !== "paused") return;
     this.state = "playing";
     this.ui.hideAll();
     this.ui.showHUD(true);
+    if (this.coop && this.netRole === "host") NSNet.send({ k: "go" });
   }
 
   /* ---------- 主循环 ---------- */
@@ -931,7 +1423,9 @@ class Game {
     this.last = now;
     if (dt > 0.1) dt = 0.1;
 
-    if (this.state === "playing" || this.state === "dead") {
+    if (this.coop && this.netRole === "guest") {
+      if (this.state === "playing" || this.state === "netwait" || this.state === "dead") this.updateGuest(dt);
+    } else if (this.state === "playing" || this.state === "dead") {
       this.acc = (this.acc || 0) + dt;
       const STEP = 1 / 60;
       let iter = 0;
@@ -941,11 +1435,11 @@ class Game {
         iter++;
       }
       if (this.state === "playing") this.ui.update(this);
-    }
-    if (this.state === "dead") {
-      this.acc = 0;
-      this.camera.update(dt);
-      this.updateEffectsVisual(dt);
+      if (this.state === "dead") {
+        this.acc = 0;
+        this.camera.update(dt);
+        this.updateEffectsVisual(dt);
+      }
     }
 
     this.render();
@@ -958,24 +1452,53 @@ class Game {
     const p = this.player;
     const stats = this.stats;
 
-    /* 玩家移动 */
-    const mv = this.input.move;
-    p.moving = mv.x !== 0 || mv.y !== 0;
-    const spd = p.baseSpeed * stats.speedMul;
-    p.x += mv.x * spd * dt;
-    p.y += mv.y * spd * dt;
-    if (p.moving) { p.facing = Math.atan2(mv.y, mv.x); p.animTime += dt * 9; }
-    p.invuln = Math.max(0, p.invuln - dt);
-    p.hitFlash = Math.max(0, p.hitFlash - dt * 4);
+    /* 玩家移动（合作模式每个人各走各的；倒下的人等队友靠近） */
+    for (const pl of this.players) {
+      pl.invuln = Math.max(0, pl.invuln - dt);
+      pl.hitFlash = Math.max(0, pl.hitFlash - dt * 4);
+      if (pl.downed) {
+        pl.moving = false;
+        let near = false;
+        for (const other of this.players) {
+          if (other === pl || other.downed) continue;
+          if (dist2(other.x, other.y, pl.x, pl.y) < 52 * 52) { near = true; break; }
+        }
+        pl.reviveT = near ? (pl.reviveT || 0) + dt : Math.max(0, (pl.reviveT || 0) - dt * 1.5);
+        if (pl.reviveT >= 2.2) {
+          pl.downed = false;
+          pl.reviveT = 0;
+          pl.hp = pl.maxHp * 0.5;
+          pl.invuln = 1.2;
+          this.addText(pl.x, pl.y - 30, "救起！", "#7ee0c0", { size: 16 });
+          this.audio.play("pickup");
+        }
+        continue;
+      }
+      const mv = pl === this.player ? this.input.move : (this.remoteInputs[pl.id] || { x: 0, y: 0 });
+      pl.moving = mv.x !== 0 || mv.y !== 0;
+      const spd = pl.baseSpeed * stats.speedMul;
+      pl.x += mv.x * spd * dt;
+      pl.y += mv.y * spd * dt;
+      if (pl.moving) { pl.facing = Math.atan2(mv.y, mv.x); pl.animTime += dt * 9; }
 
-    /* 回复 */
-    if (stats.regen > 0 && p.hp < stats.maxHp) {
-      p.regenAcc += stats.regen * dt;
-      if (p.regenAcc >= 1) { const heal = Math.floor(p.regenAcc); p.regenAcc -= heal; p.hp = Math.min(stats.maxHp, p.hp + heal); }
+      if (stats.regen > 0 && pl.hp < pl.maxHp) {
+        pl.regenAcc += stats.regen * dt;
+        if (pl.regenAcc >= 1) { const heal = Math.floor(pl.regenAcc); pl.regenAcc -= heal; pl.hp = Math.min(pl.maxHp, pl.hp + heal); }
+      }
     }
 
-    /* 相机 */
-    this.camera.follow(p.x, p.y, dt);
+    /* 相机跟随本地玩家；本地倒下时跟最近还活着的队友 */
+    let cam = p;
+    if (p.downed) {
+      let best = null, bd = Infinity;
+      for (const pl of this.players) {
+        if (pl.downed) continue;
+        const d = dist2(p.x, p.y, pl.x, pl.y);
+        if (d < bd) { bd = d; best = pl; }
+      }
+      if (best) cam = best;
+    }
+    this.camera.follow(cam.x, cam.y, dt);
     this.camera.update(dt);
 
     /* 空间网格 */
@@ -1020,7 +1543,16 @@ class Game {
     if (this.banner) { this.banner.t -= dt; if (this.banner.t <= 0) this.banner = null; }
 
     /* 死亡判定 */
-    if (p.hp <= 0 && this.state === "playing") this.gameOver();
+    if (this.coop) {
+      if (this.players.every((pl) => pl.downed) && this.state === "playing") this.gameOver();
+    } else if (p.hp <= 0 && this.state === "playing") {
+      this.gameOver();
+    }
+
+    if (this.coop && this.netRole === "host") {
+      this.snapAcc += dt;
+      if (this.snapAcc >= 1 / 15) { this.snapAcc = 0; this.sendSnapshot(); }
+    }
   }
 
   updateEffectsVisual(dt) {
@@ -1067,13 +1599,13 @@ class Game {
 
   recycleFarthest() {
     const list = this.enemies.active;
-    const p = this.player;
     let far = null, fd = -1;
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
       /* 已被标记回收的敌人仍留在活动列表中，必须跳过，
          否则同一批刷怪里会反复回收同一个目标，上限失效 */
       if (e.dead || e.boss || e.elite) continue;
+      const p = this.nearestPlayer(e.x, e.y);
       const d = dist2(p.x, p.y, e.x, e.y);
       if (d > fd) { fd = d; far = e; }
     }
@@ -1105,8 +1637,9 @@ class Game {
     const e = this.enemies.obtain();
     const ang = Math.random() * TAU;
     const edge = Math.max(this.vw, this.vh) * 0.62 + 80;
-    e.x = this.player.x + Math.cos(ang) * edge;
-    e.y = this.player.y + Math.sin(ang) * edge;
+    const base = pick(this.alivePlayers()) || this.player;
+    e.x = base.x + Math.cos(ang) * edge;
+    e.y = base.y + Math.sin(ang) * edge;
     e.vx = 0; e.vy = 0;
     e.typeId = typeId;
     e.maxHp = Math.round(def.hp * hpScale);
@@ -1135,13 +1668,13 @@ class Game {
   /* ---------- 敌人 ---------- */
   updateEnemies(dt) {
     const list = this.enemies.active;
-    const p = this.player;
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
       e.hitFlash = Math.max(0, e.hitFlash - dt * 5);
       e.spawnT += dt;
       if (e.elite || e.boss) e.rot += dt * (e.boss ? 0.6 : 1.1);
 
+      const p = this.nearestPlayer(e.x, e.y);
       const dx = p.x - e.x, dy = p.y - e.y;
       const d = Math.hypot(dx, dy) || 1;
       /* 被玩家甩得太远的普通敌人直接回收，避免无意义堆积 */
@@ -1184,10 +1717,13 @@ class Game {
       }
       if (n > 0) { e.x += px * e.speed * dt * 0.9; e.y += py * e.speed * dt * 0.9; }
 
-      /* 接触伤害 */
-      if (d < e.radius + p.radius && p.invuln <= 0) {
-        this.hurtPlayer(e.dmg);
-        p.invuln = 0.68;
+      /* 接触伤害：谁碰到谁掉血 */
+      for (const pl of this.players) {
+        if (pl.downed || pl.invuln > 0) continue;
+        if (dist2(e.x, e.y, pl.x, pl.y) < (e.radius + pl.radius) * (e.radius + pl.radius)) {
+          this.hurtPlayer(e.dmg, pl);
+          pl.invuln = 0.68;
+        }
       }
     }
   }
@@ -1210,8 +1746,9 @@ class Game {
     }
   }
 
-  hurtPlayer(amount) {
-    const p = this.player;
+  hurtPlayer(amount, target) {
+    const p = target || this.player;
+    if (p.downed) return;
     const stats = this.stats;
     const dmg = Math.max(1, amount * (1 - Math.min(0.75, stats.armor)));
     p.hp -= dmg;
@@ -1220,39 +1757,51 @@ class Game {
     this.addText(p.x, p.y - 26, "-" + Math.round(dmg), "#ff6b7a", { size: 14 });
     this.addParticles(p.x, p.y, 6, "#ff6b7a", 150);
     this.audio.play("hurt");
+    if (p.hp <= 0 && !p.downed) {
+      p.hp = 0;
+      p.downed = true;
+      p.reviveT = 0;
+      p.moving = false;
+      this.addParticles(p.x, p.y, 24, "#ff6b7a", 240);
+      this.addText(p.x, p.y - 36, "倒下", "#ff6b7a", { size: 18 });
+    }
   }
 
   /* ---------- 武器 ---------- */
   updateWeapons(dt) {
-    const p = this.player;
     const stats = this.stats;
-    for (let i = 0; i < p.weapons.length; i++) {
-      const w = p.weapons[i];
-      const def = WEAPONS[w.id];
-      const s = def.stats(w.level);
-      if (def.update) { def.update(this, w, s, dt); continue; }
-      w.timer -= dt;
-      if (w.timer <= 0) {
-        w.timer = s.cd * stats.cooldownMul;
-        def.fire(this, w, s);
+    for (const p of this.players) {
+      if (p.downed) continue;
+      this.owner = p;
+      for (let i = 0; i < p.weapons.length; i++) {
+        const w = p.weapons[i];
+        const def = WEAPONS[w.id];
+        const s = def.stats(w.level);
+        if (def.update) { def.update(this, w, s, dt); continue; }
+        w.timer -= dt;
+        if (w.timer <= 0) {
+          w.timer = s.cd * stats.cooldownMul;
+          def.fire(this, w, s);
+        }
       }
     }
+    this.owner = null;
   }
 
   /* ---------- 弹幕 ---------- */
   updateProjectiles(dt) {
     const list = this.projectiles.active;
-    const p = this.player;
     for (let i = 0; i < list.length; i++) {
       const b = list[i];
       b.t += dt;
       b.rot += (b.spin || 0) * dt;
 
+      const owner = (b.ownerId && this.players.find((pl) => pl.id === b.ownerId)) || this.player;
       if (b.kind === "boomerang") {
         if (!b.returning) {
           if (b.t >= b.outTime) b.returning = true;
         } else {
-          const dx = p.x - b.x, dy = p.y - b.y;
+          const dx = owner.x - b.x, dy = owner.y - b.y;
           const d = Math.hypot(dx, dy) || 1;
           const sp = Math.hypot(b.vx, b.vy) * 1.035;
           b.vx = (dx / d) * sp; b.vy = (dy / d) * sp;
@@ -1268,13 +1817,19 @@ class Game {
       b.y += b.vy * dt;
 
       /* 飞出视野太远则回收 */
-      if (Math.abs(b.x - p.x) > 2600 || Math.abs(b.y - p.y) > 2600) { b.dead = true; continue; }
+      const nearP = this.nearestPlayer(b.x, b.y);
+      if (Math.abs(b.x - nearP.x) > 2600 || Math.abs(b.y - nearP.y) > 2600) { b.dead = true; continue; }
 
       if (b.host) {
-        /* 敌方子弹只打玩家 */
-        if (dist2(b.x, b.y, p.x, p.y) < (b.radius + p.radius) * (b.radius + p.radius)) {
-          if (p.invuln <= 0) { this.hurtPlayer(b.dmg); p.invuln = 0.35; }
-          b.dead = true;
+        /* 敌方子弹打任意一个还站着的玩家 */
+        for (const pl of this.players) {
+          if (pl.downed || pl.invuln > 0) continue;
+          if (dist2(b.x, b.y, pl.x, pl.y) < (b.radius + pl.radius) * (b.radius + pl.radius)) {
+            this.hurtPlayer(b.dmg, pl);
+            pl.invuln = 0.35;
+            b.dead = true;
+            break;
+          }
         }
       } else {
         const near = this.grid.query(b.x, b.y, b.radius + 40);
@@ -1353,13 +1908,13 @@ class Game {
   /* ---------- 拾取 ---------- */
   updatePickups(dt) {
     const list = this.pickups.active;
-    const p = this.player;
     const stats = this.stats;
     const range = 80 * stats.pickupMul;
     const magnetR = range * 2.4;
     for (let i = 0; i < list.length; i++) {
       const g = list[i];
       g.t += dt;
+      const p = this.nearestPlayer(g.x, g.y);
       const dx = p.x - g.x, dy = p.y - g.y;
       const d = Math.hypot(dx, dy) || 1;
       if (d < magnetR) {
@@ -1440,6 +1995,20 @@ class Game {
     }
   }
 
+  alivePlayers() {
+    return this.players.filter((p) => !p.downed);
+  }
+
+  nearestPlayer(x, y) {
+    let best = null, bd = Infinity;
+    for (const p of this.players) {
+      if (p.downed) continue;
+      const d = dist2(x, y, p.x, p.y);
+      if (d < bd) { bd = d; best = p; }
+    }
+    return best || this.player;
+  }
+
   nearestEnemy(x, y, maxR, exclude) {
     const near = this.grid.query(x, y, maxR);
     let best = null, bestD = maxR * maxR;
@@ -1473,6 +2042,7 @@ class Game {
     b.life = o.life; b.pierce = o.pierce; b.kind = o.kind || "bolt";
     b.hit = null; b.t = 0; b.rot = o.ang; b.spin = o.spin || 0;
     b.outTime = o.outTime || 0; b.returning = false; b.host = !!o.host;
+    b.ownerId = this.owner ? this.owner.id : "";
     return b;
   }
 
@@ -1523,6 +2093,11 @@ class Game {
       p.xpNext = Math.round(4 + p.level * 2.2 + Math.pow(p.level, 1.45) * 0.55);
       this.pendingLevels++;
     }
+    for (const pl of this.players) {
+      pl.level = p.level;
+      pl.xp = p.xp;
+      pl.xpNext = p.xpNext;
+    }
     if (this.pendingLevels > 0 && this.state === "playing") this.openLevelUp();
   }
 
@@ -1531,6 +2106,7 @@ class Game {
     this.audio.play("level");
     this.currentChoices = this.buildChoices();
     this.ui.showLevelUp(this.currentChoices, this.player, this.pendingLevels);
+    if (this.coop && this.netRole === "host") NSNet.send({ k: "lv", n: this.pendingLevels });
   }
 
   buildChoices() {
@@ -1623,29 +2199,39 @@ class Game {
   chooseUpgrade(index) {
     const c = this.currentChoices[index];
     if (!c) return;
-    const p = this.player;
-    const beforeMax = this.stats.maxHp;
+    const targets = this.coop ? this.players : [this.player];
+    const before = targets.map((p) => ({ p, max: computeStats(p).maxHp, hp: p.hp }));
 
-    if (c.kind === "weapon-up" || c.kind === "weapon-new") grantWeapon(p, c.id);
-    else if (c.kind === "passive-up" || c.kind === "passive-new") grantPassive(p, c.id);
-    else if (c.kind === "evolve") {
-      const from = findWeapon(p, c.fromId);
-      if (from) p.weapons.splice(p.weapons.indexOf(from), 1);
-      grantWeapon(p, c.weaponId);
+    for (const p of targets) {
+      if (c.kind === "weapon-up" || c.kind === "weapon-new") grantWeapon(p, c.id);
+      else if (c.kind === "passive-up" || c.kind === "passive-new") grantPassive(p, c.id);
+      else if (c.kind === "evolve") {
+        const from = findWeapon(p, c.fromId);
+        if (from) p.weapons.splice(p.weapons.indexOf(from), 1);
+        grantWeapon(p, c.weaponId);
+      } else if (c.kind === "heal") {
+        const st = computeStats(p);
+        p.hp = Math.min(st.maxHp, p.hp + st.maxHp * 0.35);
+      } else if (c.kind === "bonus") {
+        if (c.id === "dmg") p.permDamage = (p.permDamage || 0) + 0.08;
+        else p.permHp = (p.permHp || 0) + 20;
+      }
+    }
+
+    if (c.kind === "evolve") {
       this.audio.play("evolve");
       this.showBanner("进化！" + WEAPONS[c.weaponId].name, "#ffc65c");
       this.camera.addShake(9);
-    } else if (c.kind === "heal") {
-      p.hp = Math.min(this.stats.maxHp, p.hp + this.stats.maxHp * 0.35);
-    } else if (c.kind === "bonus") {
-      if (c.id === "dmg") p.permDamage = (p.permDamage || 0) + 0.08;
-      else p.permHp = (p.permHp || 0) + 20;
     }
 
-    this.stats = computeStats(p);
-    /* 最大生命提升时，当前生命同步增加相同数值 */
-    if (this.stats.maxHp > beforeMax) p.hp += this.stats.maxHp - beforeMax;
-    if (this.stats.maxHp < p.hp) p.hp = this.stats.maxHp;
+    for (const b of before) {
+      const st = computeStats(b.p);
+      b.p.maxHp = st.maxHp;
+      if (st.maxHp > b.max) b.p.hp = Math.min(st.maxHp, b.p.hp + (st.maxHp - b.max));
+      if (b.p.hp > st.maxHp) b.p.hp = st.maxHp;
+    }
+    this.stats = computeStats(this.player);
+    this.player.maxHp = this.stats.maxHp;
     this.pendingLevels--;
     this.currentChoices = null;
 
@@ -1655,17 +2241,22 @@ class Game {
       this.state = "playing";
       this.ui.hideAll();
       this.ui.showHUD(true);
+      if (this.coop && this.netRole === "host") NSNet.send({ k: "go" });
     }
   }
 
   /* ---------- 结束 ---------- */
   gameOver() {
+    if (this.state === "dead") return;
     this.state = "dead";
     this.audio.play("death");
     this.camera.addShake(18);
     this.addParticles(this.player.x, this.player.y, 40, "#ff6b7a", 300);
     const rec = this.saveBest();
     this.ui.showGameOver(this, rec);
+    if (this.coop && this.netRole === "host") {
+      NSNet.send({ k: "over", t: this.time, kills: this.kills, level: this.player.level });
+    }
   }
 
   loadBest() {
@@ -1842,38 +2433,69 @@ class Game {
   }
 
   drawWeaponAuras(c) {
-    const p = this.player;
-    for (let i = 0; i < p.weapons.length; i++) {
-      const w = p.weapons[i];
-      const def = WEAPONS[w.id];
-      if (def.draw) def.draw(this, w, def.stats(w.level));
+    if (this.netRole === "guest") return;
+    for (const p of this.players) {
+      if (p.downed) continue;
+      this.owner = p;
+      for (let i = 0; i < p.weapons.length; i++) {
+        const w = p.weapons[i];
+        const def = WEAPONS[w.id];
+        if (def.draw) def.draw(this, w, def.stats(w.level));
+      }
     }
+    this.owner = null;
   }
 
   drawPlayer(c) {
-    const p = this.player;
-    const blink = p.invuln > 0 && Math.floor(p.invuln * 14) % 2 === 0;
+    for (const p of this.players) {
+      const local = p === this.player;
+      const blink = p.invuln > 0 && Math.floor(p.invuln * 14) % 2 === 0;
+      const col = p.color || "#7c9cff";
 
-    c.beginPath(); c.arc(p.x, p.y, p.radius * 2.6, 0, TAU);
-    const grd = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius * 2.6);
-    grd.addColorStop(0, "rgba(138,180,255,.22)");
-    grd.addColorStop(1, "rgba(138,180,255,0)");
-    c.fillStyle = grd; c.fill();
+      if (p.downed) {
+        c.save();
+        c.globalAlpha = 0.55;
+        c.beginPath(); c.arc(p.x, p.y, p.radius * 1.2, 0, TAU);
+        c.fillStyle = "#5a2030"; c.fill();
+        c.strokeStyle = "#ff6b7a"; c.lineWidth = 2; c.stroke();
+        c.strokeStyle = "#ffb3bd"; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(p.x - 6, p.y - 6); c.lineTo(p.x + 6, p.y + 6);
+        c.moveTo(p.x + 6, p.y - 6); c.lineTo(p.x - 6, p.y + 6); c.stroke();
+        c.restore();
+      } else if (!blink) {
+        c.beginPath(); c.arc(p.x, p.y, p.radius * 2.6, 0, TAU);
+        const grd = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius * 2.6);
+        grd.addColorStop(0, local ? "rgba(138,180,255,.22)" : "rgba(126,224,192,.20)");
+        grd.addColorStop(1, "rgba(138,180,255,0)");
+        c.fillStyle = grd; c.fill();
 
-    if (!blink) {
-      const bob = p.moving ? Math.sin(p.animTime) * 1.6 : 0;
-      c.beginPath(); c.arc(p.x, p.y + bob, p.radius, 0, TAU);
-      c.fillStyle = p.hitFlash > 0 ? "#ff9aa6" : "#dfe8ff"; c.fill();
-      c.strokeStyle = "#7c9cff"; c.lineWidth = 2.5; c.stroke();
+        const bob = p.moving ? Math.sin(p.animTime) * 1.6 : 0;
+        c.beginPath(); c.arc(p.x, p.y + bob, p.radius, 0, TAU);
+        c.fillStyle = p.hitFlash > 0 ? "#ff9aa6" : "#dfe8ff"; c.fill();
+        c.strokeStyle = col; c.lineWidth = local ? 2.5 : 2; c.stroke();
 
-      const ax = Math.cos(p.facing) * (p.radius + 7);
-      const ay = Math.sin(p.facing) * (p.radius + 7);
-      c.beginPath();
-      c.moveTo(p.x + ax, p.y + ay);
-      c.lineTo(p.x + Math.cos(p.facing + 2.5) * (p.radius - 1), p.y + Math.sin(p.facing + 2.5) * (p.radius - 1));
-      c.lineTo(p.x + Math.cos(p.facing - 2.5) * (p.radius - 1), p.y + Math.sin(p.facing - 2.5) * (p.radius - 1));
-      c.closePath();
-      c.fillStyle = "#7c9cff"; c.fill();
+        const ax = Math.cos(p.facing) * (p.radius + 7);
+        const ay = Math.sin(p.facing) * (p.radius + 7);
+        c.beginPath();
+        c.moveTo(p.x + ax, p.y + ay);
+        c.lineTo(p.x + Math.cos(p.facing + 2.5) * (p.radius - 1), p.y + Math.sin(p.facing + 2.5) * (p.radius - 1));
+        c.lineTo(p.x + Math.cos(p.facing - 2.5) * (p.radius - 1), p.y + Math.sin(p.facing - 2.5) * (p.radius - 1));
+        c.closePath();
+        c.fillStyle = col; c.fill();
+      }
+
+      if (!local && this.coop) {
+        c.font = "600 11px " + FONT;
+        c.textAlign = "center";
+        c.fillStyle = p.downed ? "#ff8fa6" : "rgba(232,236,247,.82)";
+        c.fillText((p.name || "队友") + (p.downed ? " · 倒下" : ""), p.x, p.y - p.radius - 12);
+        c.textAlign = "left";
+      }
+      if (p.downed && p.reviveT > 0) {
+        const w = 34, x = p.x - w / 2, y = p.y - p.radius - 22;
+        c.fillStyle = "rgba(0,0,0,.55)"; c.fillRect(x, y, w, 4);
+        c.fillStyle = "#7ee0c0"; c.fillRect(x, y, w * clamp(p.reviveT / 2.2, 0, 1), 4);
+      }
     }
   }
 
@@ -2018,6 +2640,8 @@ class UI {
       levelup: this.el("screen-levelup"),
       pause: this.el("screen-pause"),
       gameover: this.el("screen-gameover"),
+      coop: this.el("screen-coop"),
+      netwait: this.el("screen-netwait"),
     };
     this.lastSlots = "";
     this._buildSlotsCache = "";
@@ -2035,7 +2659,7 @@ class UI {
   }
 
   update(g) {
-    const p = g.player;
+    const p = g.owner || g.player;
     const stats = g.stats;
     this.el("hud-time").textContent = formatTime(g.time);
     this.el("hud-kills").textContent = formatNum(g.kills);
@@ -2055,6 +2679,9 @@ class UI {
       this._buildSlotsCache = key;
       this.el("hud-slots").innerHTML = this.renderSlots(p);
     }
+    const tip = this.el("revive-tip");
+    if (tip) tip.classList.toggle("hidden", !(g.coop && p.downed));
+    this.updateTeam(g);
   }
 
   renderSlots(p) {
@@ -2166,10 +2793,12 @@ class UI {
     this.hideAll();
     this.showHUD(false);
     this.screens.gameover.classList.remove("hidden");
-    this.el("gameover-title").textContent = isNew.time ? "新纪录！" : "你倒下了";
-    this.el("gameover-sub").textContent = isNew.time
-      ? "你活过了 " + formatTime(g.time) + "，这是目前为止最好的成绩。"
-      : "暗夜仍在继续，再来一次。";
+    this.el("gameover-title").textContent = g.coop ? "全员倒下" : (isNew.time ? "新纪录！" : "你倒下了");
+    this.el("gameover-sub").textContent = g.coop
+      ? "队伍活过了 " + formatTime(g.time) + "，等房主再来一局。"
+      : (isNew.time
+        ? "你活过了 " + formatTime(g.time) + "，这是目前为止最好的成绩。"
+        : "暗夜仍在继续，再来一次。");
     this.el("gameover-stats").innerHTML =
       '<div class="stat-box"><div class="k">生存时间</div><div class="v">' + formatTime(g.time) + "</div></div>" +
       '<div class="stat-box"><div class="k">击杀</div><div class="v">' + formatNum(g.kills) + "</div></div>" +
@@ -2185,6 +2814,58 @@ class UI {
     this.screens.start.classList.remove("hidden");
     this.refreshBest();
   }
+
+  showNetWait(on, title) {
+    this.screens.netwait.classList.toggle("hidden", !on);
+    if (on) {
+      this.showHUD(false);
+      const t = this.el("netwait-title");
+      if (t && title) t.textContent = title;
+    }
+  }
+
+  updateTeam(g) {
+    const box = this.el("hud-team");
+    if (!box) return;
+    if (!g || !g.coop) { box.classList.add("hidden"); return; }
+    box.classList.remove("hidden");
+    box.innerHTML = g.players.map((p) => {
+      const pct = clamp(p.hp / (p.maxHp || 1), 0, 1) * 100;
+      return '<div class="team-row' + (p.downed ? " down" : "") + '">' +
+        '<b style="color:' + (p.color || "#e8ecf7") + '">' + (p.name || "幸存者") + "</b>" +
+        '<span class="hp"><i style="width:' + pct + "%;background:" + (p.downed ? "#ff6b7a" : "var(--hp)") + '"></i></span>' +
+        '<span>' + (p.downed ? "倒下" : Math.max(0, Math.ceil(p.hp))) + "</span></div>";
+    }).join("");
+  }
+
+  showCoopHome() {
+    this.hideAll();
+    this.showHUD(false);
+    this.screens.coop.classList.remove("hidden");
+    this.el("coop-home").classList.remove("hidden");
+    this.el("coop-room").classList.add("hidden");
+    this.el("coop-msg").textContent = "";
+  }
+
+  renderCoopRoom() {
+    const code = NSNet.room || "----";
+    this.el("coop-room-code").textContent = code;
+    const host = NSNet.isHost();
+    const rows = (NSNet.players || []).map((p) => {
+      const i = NSNet.players.indexOf(p);
+      const me = p.id === NSNet.myId;
+      return '<div class="coop-player' + (me ? " me" : "") + '">' +
+        '<span class="dot" style="background:' + NS_COLORS[i % NS_COLORS.length] + '"></span>' +
+        "<span>" + p.name + "</span>" +
+        '<span class="tag">' + (p.id === NSNet.hostId ? "房主" : "队员") + "</span></div>";
+    }).join("");
+    this.el("coop-players").innerHTML = rows;
+    this.el("btn-coop-start").classList.toggle("hidden", !host);
+    this.el("coop-wait").classList.toggle("hidden", host);
+    this.el("coop-msg").textContent = host
+      ? (NSNet.players.length < 2 ? "可以自己先开，也可以等队友进来" : "队友到齐了，开始吧")
+      : "等房主开始…";
+  }
 }
 
 /* ============================ 12. 启动 ============================ */
@@ -2195,7 +2876,69 @@ class UI {
   game.ui = ui;
   window.__game = game;
 
+  const coopMsg = (t) => { const el = document.getElementById("coop-msg"); if (el) el.textContent = t || ""; };
+  const coopName = () => (document.getElementById("coop-name").value || "幸存者").trim().slice(0, 10) || "幸存者";
+
+  NSNet.onJoined = () => {
+    ui.screens.coop.classList.remove("hidden");
+    document.getElementById("coop-home").classList.add("hidden");
+    document.getElementById("coop-room").classList.remove("hidden");
+    ui.renderCoopRoom();
+  };
+  NSNet.onPeers = () => {
+    ui.renderCoopRoom();
+    if (game.coop && game.state === "playing" && NSNet.isHost()) {
+      game.syncCoopRoster();
+      game.sendSnapshot(true);
+    }
+    if (game.coop && game.netRole === "guest" && game.state === "playing" && NSNet.hostId !== game.hostAtStart) {
+      game.showBanner("房主离开了", "#ff6b7a");
+      game.gameOver();
+    }
+  };
+  NSNet.onMsg = (from, d) => game.netMsg(from, d);
+  NSNet.onErr = (m) => coopMsg(m.msg || "联机出了点问题");
+  NSNet.onClose = () => {
+    coopMsg("连接断开了");
+    if (game.coop && game.state === "playing") {
+      game.showBanner("连接断开", "#ff6b7a");
+      game.gameOver();
+    }
+  };
+
   document.getElementById("btn-start").addEventListener("click", () => game.startRun());
+  document.getElementById("btn-coop").addEventListener("click", () => ui.showCoopHome());
+  document.getElementById("btn-coop-back").addEventListener("click", () => {
+    NSNet.leave();
+    game.coop = false;
+    game.state = "menu";
+    ui.showStart();
+  });
+  document.getElementById("btn-coop-create").addEventListener("click", async () => {
+    coopMsg("正在连接…");
+    try {
+      await NSNet.create(coopName());
+      coopMsg("");
+    } catch (e) { coopMsg(e.message || "连不上服务器"); }
+  });
+  document.getElementById("btn-coop-join").addEventListener("click", async () => {
+    const code = (document.getElementById("coop-code").value || "").trim().toUpperCase();
+    if (code.length !== 4) { coopMsg("房号是 4 位"); return; }
+    coopMsg("正在加入…");
+    try {
+      await NSNet.join(code, coopName());
+      coopMsg("");
+    } catch (e) { coopMsg(e.message || "连不上服务器"); }
+  });
+  document.getElementById("btn-coop-leave").addEventListener("click", () => {
+    NSNet.leave();
+    ui.showCoopHome();
+  });
+  document.getElementById("btn-coop-start").addEventListener("click", () => {
+    if (!NSNet.isHost()) return;
+    NSNet.send({ k: "start" });
+    game.startCoop(true);
+  });
   document.getElementById("btn-help").addEventListener("click", () => {
     ui.screens.start.classList.add("hidden");
     ui.screens.help.classList.remove("hidden");
@@ -2204,10 +2947,26 @@ class UI {
     ui.screens.help.classList.add("hidden");
     ui.screens.start.classList.remove("hidden");
   });
+  const restartRun = () => {
+    if (game.coop) {
+      if (NSNet.isHost()) {
+        NSNet.send({ k: "start" });
+        game.startCoop(true);
+      } else {
+        NSNet.send({ k: "again" });
+        game.showBanner("等房主再来一局…", "#8e98b5");
+      }
+      return;
+    }
+    game.startRun();
+  };
   document.getElementById("btn-resume").addEventListener("click", () => game.resume());
-  document.getElementById("btn-restart-pause").addEventListener("click", () => game.startRun());
-  document.getElementById("btn-restart").addEventListener("click", () => game.startRun());
+  document.getElementById("btn-restart-pause").addEventListener("click", restartRun);
+  document.getElementById("btn-restart").addEventListener("click", restartRun);
   document.getElementById("btn-menu").addEventListener("click", () => {
+    if (game.coop) NSNet.leave();
+    game.coop = false;
+    game.netRole = null;
     game.state = "menu";
     ui.showStart();
   });

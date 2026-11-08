@@ -7,8 +7,8 @@
  */
 (function (PH) {
   PH.Config = {
-    endpointFeeds: ["https://raw.githubusercontent.com/GHBQU/game/main/games/paper-hero/endpoint.json", "https://cdn.jsdelivr.net/gh/GHBQU/game@main/games/paper-hero/endpoint.json", "https://github.com/GHBQU/game/raw/refs/heads/main/games/paper-hero/endpoint.json", "https://ghbqu.github.io/game/games/paper-hero/endpoint.json", "https://小宇.gay/games/paper-hero/endpoint.json"],
-    gameUrl: "https://小宇.gay/games/paper-hero/",
+    endpointFeeds: ["https://raw.githubusercontent.com/GHBQU/game/main/games/paper-hero/endpoint.json", "https://cdn.jsdelivr.net/gh/GHBQU/game@main/games/paper-hero/endpoint.json", "https://github.com/GHBQU/game/raw/refs/heads/main/games/paper-hero/endpoint.json", "https://ghbqu.github.io/game/games/paper-hero/endpoint.json", "https://xn--29s3l.xn--0iv.gay/games/paper-hero/endpoint.json"],
+    gameUrl: "https://xn--29s3l.xn--0iv.gay/games/paper-hero/",
     gameUrlAlt: "https://ghbqu.github.io/game/games/paper-hero/",
     repo: "GHBQU/game",
     branch: "main",
