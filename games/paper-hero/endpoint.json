@@ -1,7 +1,8 @@
 {
- "updated": 1794105063635,
+ "updated": 1794105074164,
  "endpoints": [
-  "https://sessions-desired-county-letting.trycloudflare.com"
+  "https://sessions-desired-county-letting.trycloudflare.com",
+  "https://maintains-seniors-ward-warrior.trycloudflare.com"
  ],
  "note": "本机服务 + Cloudflare 快速隧道"
 }
