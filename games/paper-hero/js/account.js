@@ -44,7 +44,7 @@
       this.foot = document.getElementById('accFoot');
       this.title = document.getElementById('accTitle');
       const lead = this.el.querySelector('.acc-lead');
-      if (lead) lead.textContent = '和游戏厅主页共用同一个账号，游戏里不注册。服务在线时账号存在 Cloudflare，离线才存本机浏览器。';
+      if (lead) lead.textContent = '和游戏厅主页账号互通，游戏里不注册。服务在线时账号存在 Cloudflare，离线才存本机浏览器。';
       document.getElementById('accClose').addEventListener('click', () => this.close());
       this.el.addEventListener('mousedown', (e) => {
         if (e.target.classList && e.target.classList.contains('acc-backdrop')) this.close();
@@ -177,7 +177,7 @@
         '<div class="acc-field"><label>密码</label>' +
         '<input id="idPw" type="password" autocomplete="current-password" placeholder="账号密码" /></div>' +
         '<p class="acc-msg" id="accMsg"></p>' +
-        '<button class="acc-btn primary" data-act="doLogin">' + (off ? '离线登录' : '登录主页账号') + '</button>' +
+        '<button class="acc-btn primary" data-act="doLogin">' + (off ? '离线登录' : '登录账号') + '</button>' +
         (off && !(id && id.keyVerified()) ? '<button class="acc-btn ghost" data-act="toKey">先去验证密钥</button>' : '') +
         '<button class="acc-btn ghost" data-act="back">返回</button>'
       );
