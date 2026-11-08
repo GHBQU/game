@@ -539,6 +539,24 @@ body.touch.playing #touch { display: block; }
   text-overflow: ellipsis;
 }
 .on-invite input { color: #2F5F96; background: rgba(255, 255, 255, 0.95); }
+.on-fixed { margin-top: 6px; }
+.on-fixed input { color: #6B4A96 !important; }
+.on-fixed .acc-btn.mini { white-space: nowrap; }
+.on-backup {
+  width: 100%;
+  height: 30px;
+  margin-top: 5px;
+  font-size: 10.5px;
+  letter-spacing: 0;
+  color: #6B4A96;
+}
+.on-cross {
+  margin: 7px 0 0;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: rgba(70, 50, 32, 0.6);
+}
+.on-cross b { color: #2F5F96; }
 .on-server { margin: 10px 0 0; padding-top: 9px; border-top: 1px dashed rgba(70, 50, 32, 0.18); }
 .on-server label { font-size: 10.5px !important; }
 .on-server .acc-btn.mini { height: 34px; }

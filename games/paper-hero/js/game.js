@@ -3718,12 +3718,10 @@
     PH.Hub.boot().then(async () => {
       // 账号可能刚绑到同名档案上，重新读一次进度
       if (PH.applyProfile) PH.applyProfile('switch');
-      // 服务开着才走游戏厅门禁；没开就纯单机，不碰账号
-      const code = PH.Hub.gateCode();
-      if (code && /\/games\//.test(location.pathname)) {
-        location.replace('../../?locked=' + encodeURIComponent(code));
-        return;
-      }
+      // 游戏厅门禁只关系「有没有账号可以同步云存档」，不阻断游戏本身：
+      // 拿着固定网址 / 邀请链接进来的手机、平板、别的电脑，只要服务器开着就得能联机，
+      // 不能被「没登录 / 没邀请码 / 不在开放时间」踢回游戏厅首页。
+      PH.Hub.gate = PH.Hub.gateCode();
       // 邀请链接（?server=…&room=…）：服务器探活完成后自动打开联机面板并进房
       if (PH.Online && PH.Online.consumeInvite) PH.Online.consumeInvite();
       if (PH.Hub.useAccount()) {

@@ -2,9 +2,10 @@
  * 建房 / 进房 / 选赛道 / 开赛，界面复用纸片风格的 .acc-* 样式。
  *
  * 联机拓扑：房主那台电脑跑 tools/net_server.py 当服务器，
- * tools/tunnel.py 用 Cloudflare 快速隧道把它映射到公网。
- * 设备 A / 设备 B 不用在同一个局域网：都打开同一个隧道地址（或游戏厅页面 + ?server=），
- * 连到同一台服务器、进同一个 4 位房号即可，最多 4 人。
+ * tools/tunnel.py 用 Cloudflare 快速隧道把它映射到公网，并把地址写到 GitHub。
+ * 手机 / 平板 / 别的电脑各自用流量或任意 Wi-Fi 打开「固定游戏网址」，
+ * 都会读到同一个隧道地址、连回同一台服务器、进同一个 4 位房号，最多 4 人。
+ * 互相之间不需要在同一个局域网，也不需要跟服务器在同一个局域网。
  */
 (function (PH) {
   const esc = (s) =>
@@ -120,7 +121,7 @@
       const N = PH.Net;
       if (this.mode === 'home') {
         this.title.textContent = '联机竞速';
-        this.lead.textContent = '本机当服务器 · 两台设备不用在同一个网络';
+        this.lead.textContent = '这台电脑当服务器 · 手机 / 平板 / 别的电脑，各在哪个网络都行';
         this.body.innerHTML = this.homeHtml();
         this.foot.innerHTML = this.originHint();
       } else if (this.mode === 'room') {
@@ -135,10 +136,10 @@
         this.body.innerHTML =
           '<p class="acc-msg err">' + esc(N.error || '连不上联机服务') + '</p>' +
           '<button class="acc-btn primary" data-act="retry">再试一次</button>' +
-          '<p class="acc-tip">联机由<b>房主那台电脑当服务器</b>，通过 Cloudflare 内网穿透连到公网，' +
-          '设备 A 和设备 B <b>不用在同一个局域网</b>。<br>' +
-          '让房主双击「启动游戏.command」或运行 <b>python3 tools/tunnel.py</b>；' +
-          '如果隧道地址刚变过，把房主发来的邀请链接打开，或把服务器地址贴到下面再连一次。</p>' +
+          '<p class="acc-tip">联机<b>只需要房主那台电脑的服务器开着</b>：Cloudflare 内网穿透把它连到公网，' +
+          '手机用流量、平板连别的 Wi-Fi、电脑在别的城市，彼此不需要在同一个局域网。<br>' +
+          '让房主双击「启动游戏.command」或运行 <b>python3 tools/tunnel.py</b>，' +
+          '隧道换地址时脚本会自动更新 GitHub；<b>这个页面会自己重连，不用刷新</b>。</p>' +
           this.serverField() +
           '<p class="acc-msg" id="onMsg"></p>';
         this.foot.textContent = '';
@@ -170,11 +171,11 @@
       if (down) {
         return (
           '<p class="acc-msg err">那台电脑上的联机服务现在是关着的</p>' +
-          '<p class="acc-tip">联机由<b>房主的电脑当服务器</b>，Cloudflare 隧道把它连到公网，' +
-          '所以两台设备 <b>不用在同一个局域网</b>，用流量 / 别的 Wi-Fi 都行。<br>' +
-          '让房主在那台电脑上双击「启动游戏.command」（或运行 <b>python3 tools/tunnel.py</b>），' +
-          '它会自动开两条隧道并把新地址同步到游戏厅。<br>' +
-          '单机关卡、双人同屏不受影响，照常能玩。</p>' +
+          '<p class="acc-tip"><b>只要房主那台电脑的服务器开着就行。</b>Cloudflare 隧道把它连到公网，' +
+          '手机用流量、平板连别的 Wi-Fi、另一台电脑在别的网络，三台设备互相不在同一个局域网也能进同一个房间。<br>' +
+          '让房主双击「启动游戏.command」（或运行 <b>python3 tools/tunnel.py</b>），' +
+          '它会自动开两条隧道并把新地址同步到 GitHub。<br>' +
+          '<b>这个页面会一直自动重连</b>，服务器开起来后不用刷新、不用重新要链接；单机关卡照常能玩。</p>' +
           this.serverField() +
           '<button class="acc-btn ghost" data-act="retry">重新检测</button>'
         );
@@ -186,9 +187,9 @@
         '<input id="onCode" maxlength="4" autocomplete="off" spellcheck="false" placeholder="4 位房号" value="' + esc(last) + '" />' +
         '<button class="acc-btn mini" data-act="join">加入</button></div></div>' +
         '<p class="acc-msg' + (this.msgType === 'err' ? ' err' : '') + '" id="onMsg">' + esc(this.msg) + '</p>' +
-        '<p class="acc-tip"><b>跨网联机：</b>房主建好房后点「复制邀请链接」发给朋友，' +
-        '朋友不管在哪个网络，打开链接就会自动连到这台电脑并进房；' +
-        '也可以把房号报给他，让他打开同一个游戏网址手动输入。最多 4 个人一起跑。</p>' +
+        '<p class="acc-tip"><b>跨网联机：</b>房主建好房后把「邀请链接」或「固定网址 + 房号」发给朋友。' +
+        '手机、平板、另一台电脑不管各自在哪个网络，打开就会自动连到这台服务器并进房。' +
+        '隧道地址每次会变，启动脚本都会自动更新 GitHub，固定网址不会失效。最多 4 个人一起跑。</p>' +
         this.serverField()
       );
     },
@@ -207,15 +208,34 @@
       return this.isLocal(m) ? '' : m;
     },
 
-    // 邀请链接直接用隧道地址当页面地址：页面和 /ws 同源，最稳，也不依赖 Pages 是否刷新。
-    // 隧道没开时不带 server=，让朋友走自动发现（避免误连到他自己电脑的 localhost）。
+    // 固定入口：地址永远不变。隧道每次换址由启动脚本同步到 GitHub，
+    // 客户端打开这个网址会自己读到最新地址，所以旧链接不会失效。
+    fixedUrl() {
+      const c = PH.Config || {};
+      // 永远用游戏厅那个不变的地址：房主不管是在 localhost、隧道地址还是 Pages 上建房，
+      // 发给朋友的都是同一条链接，隧道换了也不会失效。
+      if (c.gameUrl) return c.gameUrl;
+      return location.href.split('#')[0].split('?')[0];
+    },
+
+    // 备用网址：自定义域名在有些网络里解析不了时，GitHub Pages 官方地址一定可达
+    backupUrl() {
+      const c = PH.Config || {};
+      return c.gameUrlAlt && c.gameUrlAlt !== c.gameUrl ? c.gameUrlAlt : '';
+    },
+
+    hostOf(u) {
+      try { return new URL(u).hostname; } catch (e) { return String(u || ''); }
+    },
+
     inviteUrl() {
       const pub = this.publicEndpoint();
-      const base = pub ? pub + '/' : location.href.split('#')[0].split('?')[0];
+      const base = this.fixedUrl().replace(/\?.*$/, '');
       const q = [];
+      // server= 只是「马上能连」的快车道；这条隧道要是换了，会自动回退到 GitHub 上的新地址
       if (pub) q.push('server=' + encodeURIComponent(pub));
       q.push('room=' + encodeURIComponent(PH.Net.room || ''));
-      return base + '?' + q.join('&');
+      return base + (base.indexOf('?') >= 0 ? '&' : '?') + q.join('&');
     },
 
     roomHtml(host) {
@@ -258,14 +278,25 @@
       }
 
       const hasPub = !!this.publicEndpoint();
+      const fixed = this.fixedUrl();
       const invite =
         '<div class="acc-field on-invite"><label>' +
         (hasPub
-          ? '邀请链接 · 朋友不用和你在同一个网络'
-          : '邀请链接 · 隧道没开，这条只在同一个网络里有效；跨网请让房主运行 tools/tunnel.py') +
+          ? '邀请链接 · 手机 / 平板 / 别的电脑，各自用流量或任意 Wi-Fi 都能进'
+          : '邀请链接 · 隧道没开，跨网请让房主运行 tools/tunnel.py') +
         '</label>' +
         '<div class="acc-inline"><input id="onInvite" readonly value="' + esc(this.inviteUrl()) + '" />' +
-        '<button class="acc-btn mini" data-act="invite">复制</button></div></div>';
+        '<button class="acc-btn mini" data-act="invite">复制</button></div>' +
+        '<div class="acc-inline on-fixed"><input id="onFixed" readonly value="' + esc(fixed) + '" />' +
+        '<button class="acc-btn mini" data-act="fixed">固定网址</button></div>' +
+        (this.backupUrl()
+          ? '<button class="acc-btn ghost mini on-backup" data-act="backup">备用网址 · ' +
+            esc(this.hostOf(this.backupUrl())) + '</button>'
+          : '') +
+        '<p class="acc-tip on-cross">固定网址永远不变：隧道一换地址，启动脚本就自动更新 GitHub，' +
+        '朋友不用重新要链接，只报个房号也能进。<br>' +
+        '<b>只要这台服务器开着，三台设备彼此不在同一个局域网也照样联机。</b></p>' +
+        '</div>';
 
       return (
         '<div class="on-code"><span>房号</span><b>' + esc(N.room) + '</b>' +
@@ -290,6 +321,8 @@
           else if (act === 'join') this.join();
           else if (act === 'copy') this.copy();
           else if (act === 'invite') this.copyInvite();
+          else if (act === 'fixed') this.copyFixed();
+          else if (act === 'backup') this.copyBackup();
           else if (act === 'server') this.applyServer();
           else if (act === 'start') this.startRace();
           else if (act === 'leave') this.leave();
@@ -422,6 +455,32 @@
       } else {
         try { document.execCommand('copy'); done(); } catch (e) { this.flash('请手动复制上面的链接', true); }
       }
+    },
+
+    copyFixed() {
+      const input = document.getElementById('onFixed');
+      const url = input ? input.value : this.fixedUrl();
+      if (input) {
+        input.select();
+        input.setSelectionRange(0, url.length);
+      }
+      const done = () => this.flash('固定网址已复制：' + url + '（报房号 ' + PH.Net.room + ' 给朋友就行）', false);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done).catch(() => {
+          try { document.execCommand('copy'); done(); } catch (e) { this.flash('请手动复制上面的固定网址', true); }
+        });
+      } else {
+        try { document.execCommand('copy'); done(); } catch (e) { this.flash('请手动复制上面的固定网址', true); }
+      }
+    },
+
+    copyBackup() {
+      const url = this.backupUrl();
+      if (!url) return;
+      const done = () => this.flash('备用网址已复制：' + url + '（房号 ' + PH.Net.room + '）', false);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done).catch(() => this.flash('备用网址：' + url, false));
+      } else this.flash('备用网址：' + url, false);
     },
 
     startRace() {

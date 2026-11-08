@@ -1,13 +1,18 @@
 /* 纸片勇者 — 游戏厅桥接层
  *
- * 这个文件负责三件事：
- *   1. 找到「本机服务」现在在哪：读同目录 endpoint.json，逐个 /health 探活，挑最快的那个。
- *      endpoint.json 由本机的 tools/tunnel.py 在每次隧道重启后自动更新到 GitHub。
- *      **本机那台电脑就是服务器**：Cloudflare 快速隧道把它映射到公网，
- *      设备 A / 设备 B 不用在同一个局域网，只要都连到同一个隧道地址就能进同一个房间。
- *      邀请链接里的 ?server= 可以强制指定服务器，避免朋友误连到他自己电脑上的服务。
- *   2. 账号：用游戏厅（../../arcade.js）的账号，有账号才把进度存到本机服务上。
- *   3. 服务没开 / 探测失败 → 整个联机和账号系统静默关掉，游戏照常单机玩。
+ * 联机拓扑（只要「那台服务器电脑」开着，别的设备随便在哪个网络）：
+ *
+ *   手机(流量) ┐
+ *   平板(别的 Wi-Fi) ┼──> 固定游戏网址 ──读 GitHub 上的 endpoint.json──> 当前公网隧道地址
+ *   电脑(别的城市) ┘                                                        │
+ *                                    <──────── WebSocket /ws ─────────────┘
+ *                                              全部连回同一台本机服务器、同一个房间
+ *
+ * 1. 端点发现：js/config.js 里列出「GitHub 请求地址」，tunnel.py 每次隧道换址都会更新它。
+ *    同时读同目录 endpoint.json 兜底；逐个 /health 探活，挑最快且健康的那个。
+ * 2. 公网页面会自动定时重试：朋友可以先把页面开着，服务器一开机就自己连上，不用刷新；
+ *    隧道换地址后也会自动跟到新地址。?server= 可强制指定（邀请链接用它，失效时自动回退）。
+ * 3. 账号：用游戏厅（../../arcade.js）的账号；服务没开就静默关掉账号和联机，单机照常玩。
  */
 (function (PH) {
   const K_SERVER = 'paperhero.server'; // 手动/邀请指定的服务器地址
@@ -73,22 +78,92 @@
       return v;
     },
 
+    /* ---------------- 从 GitHub 读「当前隧道地址」 ---------------- */
+    // 这些地址写在 js/config.js，由「启动游戏.command」的配置区生成。
+    // 隧道每次换址，tunnel.py 都会更新 GitHub 上那份 endpoint.json。
+    feeds() {
+      const c = PH.Config || {};
+      const out = [];
+      const add = (u) => {
+        if (u && out.indexOf(u) < 0) out.push(String(u));
+      };
+      (c.endpointFeeds || []).forEach(add);
+      add('endpoint.json'); // 同目录兜底：本机 / 单文件版 / Pages 缓存
+      return out;
+    },
+
+    decodeApiContent(s) {
+      const bin = atob(String(s).replace(/\s/g, ''));
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      try {
+        return new TextDecoder('utf-8').decode(bytes);
+      } catch (e) {
+        return bin;
+      }
+    },
+
+    // 加随机参数绕开 GitHub / CDN 的缓存，保证换址后几秒内就能读到新地址。
+    // 每个源单独超时：某个源卡住或超时，其它源照常返回结果。
+    async readFeed(url) {
+      const sep = url.indexOf('?') >= 0 ? '&' : '?';
+      const bust = '_=' + Date.now() + Math.random().toString(36).slice(2, 7);
+      let ctrl = null;
+      let timer = null;
+      try {
+        ctrl = new AbortController();
+        timer = setTimeout(() => {
+          try { ctrl.abort(); } catch (e) {}
+        }, 3200);
+      } catch (e) {}
+      try {
+        const r = await fetch(url + sep + bust, {
+          cache: 'no-store',
+          signal: ctrl ? ctrl.signal : undefined,
+        });
+        if (!r.ok) return null;
+        let j = await r.json();
+        if (j && j.content && j.encoding === 'base64') j = JSON.parse(this.decodeApiContent(j.content));
+        if (!j || !Array.isArray(j.endpoints)) return null;
+        return {
+          updated: +j.updated || 0,
+          endpoints: j.endpoints.map((u) => String(u).replace(/\/+$/, '')).filter(Boolean),
+        };
+      } catch (e) {
+        return null;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    },
+
+    async readFeeds() {
+      const rs = await Promise.all(this.feeds().map((u) => this.readFeed(u).catch(() => null)));
+      const list = [];
+      let updated = 0;
+      rs.filter(Boolean).forEach((r) => {
+        updated = Math.max(updated, r.updated);
+        r.endpoints.forEach((u) => {
+          if (list.indexOf(u) < 0) list.push(u);
+        });
+      });
+      if (updated > (this.feedUpdated || 0)) this.feedUpdated = updated;
+      return { updated: this.feedUpdated || 0, endpoints: list };
+    },
+
     /* ---------------- 端点发现 ---------------- */
     async loadCandidates() {
       const list = [];
       const manual = this.manual();
       const here = location.protocol === 'http:' || location.protocol === 'https:' ? location.origin : '';
-      // 自己开服务（页面就在服务根目录）时，同源就是最稳的；
+      // 页面直接从隧道地址打开时，同源就是那台服务器；
       // 挂在游戏厅 /games/ 下面时同源是 Pages，探它只会 404，跳过
       if (here && !/\/games\//.test(location.pathname)) list.push(here);
+      // GitHub 上的实时地址表：手机 / 平板 / 别的电脑都从这儿拿到当前隧道地址
       try {
-        const r = await fetch('endpoint.json?t=' + Date.now(), { cache: 'no-store' });
-        if (r.ok) {
-          const j = await r.json();
-          (j.endpoints || []).forEach((u) => list.push(String(u).replace(/\/+$/, '')));
-        }
+        const f = await this.readFeeds();
+        f.endpoints.forEach((u) => list.push(u));
       } catch (e) {
-        /* Pages 上拿不到就当没有 */
+        /* 拿不到就继续用下面的兜底 */
       }
       // 本机直连兜底：只有双击 file:// 或页面本来就开在这台电脑上时才加。
       // 公网页面绝不能探 localhost，否则朋友会连到他自己电脑的服务、房号永远对不上。
@@ -135,6 +210,30 @@
     },
 
     async discover() {
+      const prev = this.status;
+      const ok = await this._discover();
+      // 服务器从「关着」变「开着」（或反过来）时，开着的联机面板要自己刷新，
+      // 朋友不必手动点「重新检测」或刷新网页。
+      if (prev !== this.status && PH.Online && PH.Online.opened) {
+        try {
+          PH.Online.mode = PH.Net && PH.Net.room ? 'room' : this.status === 'online' ? 'home' : 'error';
+          PH.Online.render();
+        } catch (e) {}
+      }
+      // 朋友提前把邀请链接开着、房主还没开机：服务器一上线就自动把房间加回来，
+      // 不用刷新网页、不用重新点链接。
+      if (prev === 'offline' && this.status === 'online' && PH.Online && PH.Online.pendingRoom) {
+        try {
+          if (!(PH.Net && PH.Net.room) && !PH.Online.busy) {
+            PH.Online._inviteDone = false;
+            PH.Online.consumeInvite();
+          }
+        } catch (e) {}
+      }
+      return ok;
+    },
+
+    async _discover() {
       this.status = 'probing';
       this.lastError = '';
       this.emit('change');
@@ -164,14 +263,60 @@
     },
 
     async boot() {
+      let ok = false;
       try {
-        return await this.discover();
+        ok = await this.discover();
       } catch (e) {
         this.status = 'offline';
         this.lastError = (e && e.message) || '探测失败';
         this.emit('change');
-        return false;
       }
+      this.startWatcher();
+      return ok;
+    },
+
+    /* ---------------- 「只要服务器开着就行」的自动守候 ----------------
+     * 公网页面才开：手机 / 平板 / 别的电脑可以把固定网址一直开着，
+     * 房主一启动服务器（或隧道换了地址），页面会自己连上去，不用刷新、不用重发链接。
+     * 本地 / file:// 页面保持一次性探测，避免开发调试时反复抢服务器。 */
+    isPublicPage() {
+      if (location.protocol === 'file:') return false;
+      const h = location.hostname || '';
+      return !/^(localhost|127\.0\.0\.1|\[::1\]|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
+    },
+
+    startWatcher() {
+      if (this._watcher || !this.isPublicPage()) return;
+      this._tick = 0;
+      this._watcher = setInterval(async () => {
+        this._tick++;
+        // 离线时每 8 秒找一次服务器；在线后降到 32 秒巡检，别给 GitHub / CDN 添压力
+        if (this.status === 'online' && this._tick % 4 !== 0) return;
+        try {
+          if (this.status === 'offline') {
+            await this.discover(); // 服务器开了没？自动重试
+            return;
+          }
+          if (this.status !== 'online') return;
+          // 隧道换地址：看 GitHub 地址表里有没有没见过的新地址
+          const f = await this.readFeeds();
+          const fresh = f.endpoints.some((u) => (this.candidates || []).indexOf(u) < 0);
+          if (fresh) {
+            if (!(PH.Net && PH.Net.room)) await this.discover();
+            return;
+          }
+          // 当前这条隧道挂了：立刻换到还活着的那条
+          const alive = await this.probe(this.endpoint, 2200);
+          if (!alive) await this.discover();
+        } catch (e) {
+          /* 网络抖一下，下一轮再来 */
+        }
+      }, 8000);
+    },
+
+    stopWatcher() {
+      if (this._watcher) clearInterval(this._watcher);
+      this._watcher = null;
     },
 
     // 联机中途掉线：换下一个健康端点；都不行就重读 endpoint.json
