@@ -13,6 +13,6 @@
     repo: "GHBQU/game",
     branch: "main",
     endpointPath: "games/paper-hero/endpoint.json",
-    updated: 1794109086421,
+    updated: 1794146965360,
   };
 })(window.PH);
