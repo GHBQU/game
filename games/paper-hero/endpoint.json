@@ -1,8 +1,10 @@
 {
- "updated": 1794105959120,
+ "updated": 1794107774792,
  "endpoints": [
   "https://island-properly-promo-retirement.trycloudflare.com",
   "https://meyer-ntsc-acrobat-endorsement.trycloudflare.com"
  ],
- "note": "本机服务 + Cloudflare 快速隧道"
+ "note": "本机服务 + Cloudflare 快速隧道（隧道换址时由启动脚本自动更新）",
+ "github": "https://raw.githubusercontent.com/GHBQU/game/main/games/paper-hero/endpoint.json",
+ "gameUrl": "https://小宇.gay/games/paper-hero/"
 }
