@@ -386,6 +386,8 @@
         // 把检查点激活
         for (const e of this.entities) if (e.type === 'checkpoint' && Math.abs(e.x - cp.x) < 80) e.active = true;
       }
+      // 异境关卡：装载反常空间规则（常规关卡 def.odd 缺省，这里等于没调用）
+      if (PH.Oddity) PH.Oddity.install(this, def);
       this.updateCamera(1, true);
     }
 
@@ -777,6 +779,8 @@
 
     // 泡泡破了 / 单人扣命后 → 回到存档点
     respawnBubbledPlayer(p) {
+      // 异境：回存档点前把反常空间状态归位（常规关卡无操作）
+      if (PH.Oddity) PH.Oddity.reset(this);
       // 联机竞速没有「存档点」的概念，回到最近的安全落脚点更合理
       if (this.online && p.lastSafe) {
         p.reset(p.lastSafe.x, p.lastSafe.y);
@@ -910,6 +914,9 @@
         this.timeUp = true;
         this.player.hurt(99, this);
       }
+
+      // 异境规则跑在物理之前：翻页 / 纸洞 / 落天井都基于上一帧位置判定
+      if (PH.Oddity) PH.Oddity.preUpdate(this, d);
 
       const frozen = this.online && this.countdown > 0;
       for (const pl of this.players) {
@@ -1077,6 +1084,7 @@
       ctx.translate(-Math.round(camX), -Math.round(camY));
       this.drawPits(camX);
       this.drawTiles(camX, camY);
+      if (PH.Oddity) PH.Oddity.draw(this, ctx, camX, camY);
       this.drawProps(camX);
       this.drawEntities(camX, camY);
       this.drawBullets();
@@ -1344,6 +1352,9 @@
     challenge: null,
     lastChallenge: null,
     challengeT: 0,
+    odd: null,
+    lastOdd: null,
+    oddT: 0,
     mode: 'single', // 'single' | 'duel'
     lastDuel: null,
     duelT: 0,
@@ -1389,6 +1400,7 @@
     G.levelId = id;
     G.levelIndex = PH.LEVEL_ORDER.indexOf(id);
     G.challenge = (PH.CHALLENGE_ORDER || []).indexOf(id) >= 0 ? id : null;
+    G.odd = (PH.ODD_ORDER || []).indexOf(id) >= 0 ? id : null;
     const music = id.endsWith('B') ? 'boss' : def.theme === 'meadow' || def.theme === 'courtyard' ? 'field' : 'cave';
     PH.Audio.play(music);
     setState('play');
@@ -1864,6 +1876,42 @@
       },
     });
 
+    /* ---- 异境关卡入口：独立序列，和主线 / 限时挑战都不混 ---- */
+    const oy = by + bh + 10, oh = 50;
+    const ox = bx, ow = bw;
+    const overO = Pointer.inside && Pointer.x > ox && Pointer.x < ox + ow && Pointer.y > oy && Pointer.y < oy + oh;
+    const oddDoneN = (PH.ODD_ORDER || []).filter((id) => Save.cleared[id]).length;
+    ctx.save();
+    ctx.translate(ox + ow / 2, oy + oh / 2 - (overO ? 3 : 0));
+    ctx.translate(-ow / 2, -oh / 2);
+    PH.Paper.panel(ctx, 0, 0, ow, oh, {
+      fill: '#F1E8F8', fill2: '#DCCBEC', seed: 97,
+      shadowAlpha: overO ? 0.48 : 0.32,
+    });
+    ctx.save();
+    ctx.fillStyle = '#6B4A96';
+    PH.Paper.roughRect(ctx, 14, 9, 112, oh - 18, 1.4, 99);
+    ctx.fill();
+    ctx.restore();
+    PH.Paper.text(ctx, '异境关卡', 70, oh / 2 + 7, {
+      size: 19, align: 'center', color: '#FFF6E2', font: PH.Fonts.hand, weight: '900',
+    });
+    PH.Paper.text(ctx, '4 张反常地形 · 独立序列 X-1 ~ X-4，不并进主线也不占解锁', 142, oh / 2 - 2, {
+      size: 14.5, color: '#4A3660', weight: '700',
+    });
+    PH.Paper.text(ctx, '已通过 ' + oddDoneN + ' / ' + (PH.ODD_ORDER || []).length + ' 张 · 想什么时候进都行', 142, oh / 2 + 17, {
+      size: 11.5, color: 'rgba(74,54,96,.68)',
+    });
+    PH.Paper.text(ctx, '进入 ›', ow - 24, oh / 2 + 8, {
+      size: 19, align: 'right', color: '#6B4A96', weight: '900', font: PH.Fonts.hand,
+    });
+    ctx.restore();
+    G.buttons.push({
+      id: 'odd', x: ox, y: oy, w: ow, h: oh,
+      label: '', hover: 0, custom: true,
+      onClick: () => setState('odd'),
+    });
+
     addBtn('back', 22, 20, 96, 40, '返回', () => setState('title'), { size: 17, color: '#F6EEDC' });
     if (Input.pressed('pause')) setState('title');
   }
@@ -2102,6 +2150,11 @@
       if (Save.cleared[id]) keep[id] = true;
       if (Save.best && Save.best[id]) keepBest[id] = Save.best[id];
     });
+    // 异境是独立序列：主线回滚不该抹掉它的通过记录
+    (PH.ODD_ORDER || []).forEach((id) => {
+      if (Save.cleared[id]) keep[id] = true;
+      if (Save.best && Save.best[id]) keepBest[id] = Save.best[id];
+    });
     Save.cleared = keep;
     Save.best = keepBest;
     Save.unlocked = lastBoss < 0 ? 1 : Math.min(PH.LEVEL_ORDER.length, lastBoss + 2);
@@ -2194,10 +2247,10 @@
       G.mode = 'single';
       startLevel(G.levelId);
     }, { color: '#FFF3D0', size: 18 });
-    addBtn('failHome', VW / 2 + 20, y + h - 68, 170, 48, '回标题', () => {
+    addBtn('failHome', VW / 2 + 20, y + h - 68, 170, 48, G.odd ? '异境列表' : '回标题', () => {
       G.world = null;
       G.mode = 'single';
-      setState('title');
+      setState(G.odd ? 'odd' : 'title');
     }, { color: '#F6EEDC', size: 17 });
   }
 
@@ -2383,6 +2436,210 @@
       addBtn('backc', VW / 2 - 60, y + h - 74, 130, 50, '返回列表', () => setState('challenge'), { size: 17 });
       addBtn('homec', VW / 2 + 80, y + h - 74, 120, 50, '回标题', () => setState('title'), { size: 17 });
     }
+  }
+
+  /* ---------------- 场景：异境关卡选图 ---------------- */
+  // 中文按字断行，够卡片用就行
+  function oddLines(text, per) {
+    const out = [];
+    let line = '';
+    for (const ch of String(text || '')) {
+      line += ch;
+      if (line.length >= per) { out.push(line); line = ''; }
+    }
+    if (line) out.push(line);
+    return out;
+  }
+
+  function drawOdd(dt) {
+    G.titleT += dt;
+    PH.Paper.drawBackdrop(ctx, 'cave', G.titleT * 6, 0, G.titleT, 9999);
+    ctx.fillStyle = 'rgba(20,14,30,0.64)';
+    ctx.fillRect(0, 0, VW, VH);
+
+    PH.Paper.text(ctx, '异境关卡', VW / 2, 60, {
+      size: 40, align: 'center', color: '#FDF6E3',
+      outline: 'rgba(70,40,110,0.9)', outlineW: 9,
+      font: PH.Fonts.hand, weight: '900',
+    });
+    const list = PH.ODD_ORDER;
+    const done = list.filter((id) => Save.cleared[id]).length;
+    PH.Paper.text(ctx, '独立序列 X-1 ~ X-4 · 单人专用 · 四张不按常理通行的纸 · 不占用主线解锁（已过 ' + done + ' / ' + list.length + '）', VW / 2, 88, {
+      size: 13, align: 'center', color: 'rgba(253,246,227,0.76)',
+    });
+
+    G.buttons = [];
+    const cw = 440, chh = 208, gx = 20, gy = 8;
+    const sx = (VW - (cw * 2 + gx)) / 2, sy = 100;
+
+    list.forEach((id, i) => {
+      const def = PH.Levels[id];
+      const o = def.odd || {};
+      const x = sx + (i % 2) * (cw + gx);
+      const y = sy + Math.floor(i / 2) * (chh + gy);
+      const over = Pointer.inside && Pointer.x > x && Pointer.x < x + cw && Pointer.y > y && Pointer.y < y + chh;
+      const title = PH.LEVEL_TITLES[id];
+      const cleared = !!Save.cleared[id];
+
+      ctx.save();
+      ctx.translate(x + cw / 2, y + chh / 2 - (over ? 3 : 0));
+      ctx.rotate((i % 2 ? 1 : -1) * 0.005);
+      ctx.translate(-cw / 2, -chh / 2);
+      PH.Paper.panel(ctx, 0, 0, cw, chh, {
+        fill: '#F7F0E2', fill2: '#E7DCC6', seed: 71 + i * 17,
+        shadowAlpha: over ? 0.52 : 0.34,
+      });
+      PH.Paper.tape(ctx, cw / 2 - 30, 2, 60, i % 2 ? 0.1 : -0.1);
+
+      // 左栏：编号、名称、序列徽章
+      PH.Paper.text(ctx, '0' + (i + 1), 18, 46, {
+        size: 32, color: title.color, font: PH.Fonts.hand, weight: '900',
+      });
+      PH.Paper.text(ctx, def.name, 18, 76, {
+        size: 21, color: '#3A2A1E', font: PH.Fonts.hand, weight: '900',
+      });
+      oddLines(def.sub, 13).slice(0, 2).forEach((ln, k) => {
+        PH.Paper.text(ctx, ln, 18, 98 + k * 15, { size: 11.5, color: 'rgba(90,70,50,.7)' });
+      });
+      ctx.save();
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = title.color;
+      PH.Paper.roughRect(ctx, 16, 132, 128, 24, 1.2, 30 + i);
+      ctx.fill();
+      ctx.restore();
+      PH.Paper.text(ctx, '异境 ' + (i + 1) + ' / ' + list.length + ' · 独立序列', 80, 149, {
+        size: 11, align: 'center', color: '#FFF6E2', weight: '800',
+      });
+      PH.Paper.text(ctx, cleared ? '已通过 · 再走一遍' : '点我进入 ›', 18, 180, {
+        size: 13, color: title.color, weight: '800', font: PH.Fonts.hand,
+      });
+      if (cleared) PH.Paper.icon(ctx, 'star', 148, 174, 15, '#E2A93B');
+
+      // 分隔
+      ctx.save();
+      ctx.strokeStyle = 'rgba(90,70,50,0.2)';
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([4, 5]);
+      ctx.beginPath();
+      ctx.moveTo(158, 16);
+      ctx.lineTo(158, chh - 16);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // 右栏：四项明确说明
+      const fields = [
+        ['特殊地形', o.brief, '#6B4A96'],
+        ['可玩性边界', o.bound, '#2F7F88'],
+        ['序列位置', o.place, '#8A5A16'],
+        ['与常规关卡的区分', o.distinct, '#C8443A'],
+      ];
+      let fy = 22;
+      fields.forEach(([label, text, color]) => {
+        PH.Paper.text(ctx, label, 172, fy, { size: 10.5, color, weight: '900' });
+        fy += 12.5;
+        const lines = oddLines(text, 24);
+        lines.forEach((ln) => {
+          PH.Paper.text(ctx, ln, 172, fy, { size: 10.5, color: 'rgba(58,42,30,.86)' });
+          fy += 12;
+        });
+        fy += 2;
+      });
+      ctx.restore();
+
+      G.buttons.push({
+        id: 'od' + id, x, y, w: cw, h: chh, label: '', hover: 0, custom: true,
+        onClick: () => { G.mode = 'single'; startLevel(id); },
+      });
+    });
+
+    addBtn('back', 22, 20, 96, 40, '返回', () => setState('select'), { size: 17, color: '#F6EEDC' });
+    if (Input.pressed('pause')) setState('select');
+  }
+
+  /* ---------------- 场景：异境结算 ---------------- */
+  function drawOddClear(dt) {
+    G.oddT += dt;
+    const st = G.lastOdd || { id: '', coins: 0, total: 0, score: 0, time: 0, rule: '', place: '' };
+    G.world.draw();
+    ctx.fillStyle = 'rgba(24,16,32,0.62)';
+    ctx.fillRect(0, 0, VW, VH);
+
+    const w = 560, h = 404, x = (VW - w) / 2, y = (VH - h) / 2;
+    PH.Paper.stackPanel(ctx, x, y, w, h, { fill: '#FCF6E6', fill2: '#E9E0CC', seed: 77, shadowAlpha: 0.56 });
+    PH.Paper.tape(ctx, x + 40, y + 2, 100, -0.2);
+    PH.Paper.stamp(ctx, x + w - 92, y + 56, '异境', -0.16, 0.62);
+
+    const def = PH.Levels[st.id];
+    PH.Paper.text(ctx, '异境通过', VW / 2 - 60, y + 68, {
+      size: 36, align: 'center', color: '#3A2A1E', font: PH.Fonts.hand, weight: '900',
+    });
+    PH.Paper.text(ctx, (def ? def.id + '  ' + def.name : '') + ' · 这张纸的规矩被你摸清了', VW / 2, y + 96, {
+      size: 14, align: 'center', color: 'rgba(90,70,50,.75)',
+    });
+
+    const rows = [
+      ['金币', st.coins + ' / ' + st.total],
+      ['得分', '' + st.score],
+      ['用时', U.fmtTime(st.time)],
+    ];
+    rows.forEach((r, i) => {
+      PH.Paper.text(ctx, r[0], x + 62, y + 138 + i * 34, { size: 16, color: '#6B5136' });
+      PH.Paper.text(ctx, r[1], x + w - 62, y + 138 + i * 34, { size: 18, align: 'right', color: '#3A2A1E', weight: '800' });
+    });
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(107,74,150,0.09)';
+    ctx.fillRect(x + 40, y + 246, w - 80, 68);
+    ctx.restore();
+    PH.Paper.text(ctx, '异境规则', x + 54, y + 266, { size: 11, color: '#6B4A96', weight: '900' });
+    oddLines(st.rule, 42).slice(0, 2).forEach((ln, k) => {
+      PH.Paper.text(ctx, ln, x + 54, y + 284 + k * 15, { size: 12.5, color: '#4A3626' });
+    });
+    PH.Paper.text(ctx, st.place, VW / 2, y + 332, {
+      size: 11, align: 'center', color: 'rgba(90,70,50,.6)',
+    });
+
+    G.buttons = [];
+    const idx = PH.ODD_ORDER.indexOf(st.id);
+    const nextId = PH.ODD_ORDER[idx + 1];
+    if (nextId) {
+      addBtn('nexto', VW / 2 - 210, y + h - 66, 140, 48, '下一异境', () => { G.mode = 'single'; startLevel(nextId); }, { color: '#FFF3D0', size: 17 });
+      addBtn('retryo', VW / 2 - 60, y + h - 66, 130, 48, '再走一遍', () => { G.mode = 'single'; startLevel(st.id); }, { size: 16 });
+      addBtn('backo', VW / 2 + 80, y + h - 66, 130, 48, '异境列表', () => setState('odd'), { size: 16 });
+    } else {
+      addBtn('retryo', VW / 2 - 200, y + h - 66, 130, 48, '再走一遍', () => { G.mode = 'single'; startLevel(st.id); }, { color: '#FFF3D0', size: 16 });
+      addBtn('backo', VW / 2 - 60, y + h - 66, 130, 48, '异境列表', () => setState('odd'), { size: 16 });
+      addBtn('homeo', VW / 2 + 80, y + h - 66, 120, 48, '回标题', () => setState('title'), { size: 16 });
+    }
+  }
+
+  function finishOdd() {
+    const w = G.world;
+    if (!w || w.oddDone) return;
+    w.oddDone = true;
+    const id = G.odd;
+    Save.cleared[id] = true;
+    Save.best = Save.best || {};
+    const prevBest = Save.best[id];
+    const used = Math.round(w.def.time - w.timeLeft);
+    if (!prevBest || w.score > prevBest.score) {
+      Save.best[id] = { score: w.score, coins: w.player.coins, time: used };
+    }
+    Save.save();
+    if (PH.Hub && PH.Hub.pushSave) PH.Hub.pushSave(Save.snapshot());
+    const def = PH.Levels[id];
+    G.lastOdd = {
+      id,
+      coins: w.player.coins,
+      total: w.totalCoins,
+      score: w.score,
+      time: w.def.time - w.timeLeft,
+      rule: (def.odd && def.odd.rule) || '',
+      place: (def.odd && def.odd.place) || '',
+    };
+    G.oddT = 0;
+    setState('oddClear');
   }
 
   /* ---------------- 场景：帮助 ---------------- */
@@ -2854,6 +3111,17 @@
       });
     }
 
+    // 异境：常驻一行规则，别让玩家拿常规通行直觉去理解这张图
+    if (G.odd && !w.duel && !w.online) {
+      const rule = PH.Oddity ? PH.Oddity.rule(w.def) : '';
+      if (rule) {
+        PH.Paper.text(ctx, '异境规则 · ' + rule, VW / 2, VH - 14, {
+          size: 12.5, align: 'center', color: '#F7EEFF',
+          outline: 'rgba(38,24,60,0.88)', outlineW: 5, weight: '700',
+        });
+      }
+    }
+
     // 右：道具槽
     PH.Paper.panel(ctx, VW - 14 - 240, 12, 240, 56, { fill: '#FCF6E6', fill2: '#EDE0C4', seed: 13, shadowAlpha: 0.28, blur: 10 });
     const slots = [
@@ -3022,6 +3290,10 @@
       }
       if (G.challenge) {
         finishChallenge();
+        return;
+      }
+      if (G.odd) {
+        finishOdd();
         return;
       }
       Save.cleared[G.levelId] = true;
@@ -3263,7 +3535,7 @@
     const w = 460, h = 300, x = (VW - w) / 2, y = (VH - h) / 2;
     PH.Paper.stackPanel(ctx, x, y, w, h, { fill: '#FBF1DE', fill2: '#EBDCC0', seed: 29, shadowAlpha: 0.5 });
     const timeUp = G.challenge && G.world && G.world.timeUp;
-    PH.Paper.text(ctx, timeUp ? '时间到！' : G.challenge ? '挑战失败' : '被纸片打败了', VW / 2, y + 92, {
+    PH.Paper.text(ctx, timeUp ? '时间到！' : G.challenge ? '挑战失败' : G.odd ? '异境没走通' : '被纸片打败了', VW / 2, y + 92, {
       size: timeUp ? 42 : 38,
       align: 'center',
       color: timeUp ? '#C8443A' : '#3A2A1E',
@@ -3277,7 +3549,9 @@
     });
     G.buttons = [];
     addBtn('retry', VW / 2 - 150, y + 164, 300, 52, '再来一次', () => restartLevel(), { color: '#FFF3D0' });
-    addBtn('sel', VW / 2 - 150, y + 226, 300, 46, G.challenge ? '返回挑战列表' : '返回选关', () => setState(G.challenge ? 'challenge' : 'select'), { size: 19 });
+    addBtn('sel', VW / 2 - 150, y + 226, 300, 46,
+      G.challenge ? '返回挑战列表' : G.odd ? '返回异境列表' : '返回选关',
+      () => setState(G.challenge ? 'challenge' : G.odd ? 'odd' : 'select'), { size: 19 });
   }
 
   function drawVictory(dt) {
@@ -3655,6 +3929,12 @@
         break;
       case 'challengeClear':
         drawChallengeClear(dt);
+        break;
+      case 'odd':
+        drawOdd(dt);
+        break;
+      case 'oddClear':
+        drawOddClear(dt);
         break;
       case 'duelClear':
         drawDuelClear(dt);
