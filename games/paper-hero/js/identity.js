@@ -358,7 +358,7 @@
         hash: cred.hash,
       });
       if (!r.ok) return { ok: false, msg: r.msg || '账号存不到本机服务器' };
-      if (r.created === false) {
+      if (r.created === false && r.same !== true) {
         return { ok: false, msg: '本机服务器上已有同名账号，但密码不一致' };
       }
       this.rememberHash(cred.name, cred.salt, cred.hash, 'server');
