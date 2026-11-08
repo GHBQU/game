@@ -198,6 +198,11 @@
       this.deathSpot = { x: this.cx, y: this.y };
     }
 
+    // 掉坑专用：泡泡锚定在最后的安全落脚点，但人继续往下掉，不做瞬移
+    markDeathAt(x, y) {
+      this.deathSpot = { x, y };
+    }
+
     hurt(n, g, srcX) {
       if (this.invuln > 0 || this.dead) return false;
       // 双人竞速也会掉血：死了变泡泡，队友能戳破救回来
@@ -382,24 +387,22 @@
       if (this.y > g.level.h * T + 80) {
         if (g.duel || g.online) {
           // 多人：掉坑也算一次倒下，和被怪物打倒走同一条「扣命 → 变泡泡」流程。
-          // 先把人放回最近的安全落脚点，泡泡才会飘在队友跳起来够得到的半空，
-          // 而不是留在画面外的深渊里。
+          // 身体继续坠进深渊（不瞬移），泡泡锚定在最后的安全落脚点上，
+          // 队友跳起来才够得到，远端玩家也按这个锚点画泡泡。
           const sp = this.lastSafe || this.spawn || { x: g.player.spawn.x, y: g.player.spawn.y };
-          this.x = sp.x;
-          this.y = sp.y - 8;
+          this.markDeathAt(sp.x + this.w / 2, sp.y);
           this.vx = 0;
-          this.vy = 0;
+          this.vy = Math.max(this.vy, 480);
           this.onGround = false;
           this.invuln = 0;
           this.stun = 0;
           this.hp = 0;
           this.dead = true;
           this.deadT = 0;
-          this.deadFloat = true;
-          this.deadFloatY = this.y;
-          this.markDeath();
+          this.deadFloat = false;
+          this.deadFloatY = 0;
           PH.Audio.sfx('die');
-          g.burst(this.cx, this.cy, 14, { color: '#E2574C', kind: 'paper' });
+          g.burst(sp.x + this.w / 2, sp.y + this.h / 2, 12, { color: '#E2574C', kind: 'paper' });
           g.toast((g.online ? '' : this.tag + ' ') + '掉下去了 · 快跳起来戳破泡泡');
         } else if (!this.dead) {
           this.dead = true;

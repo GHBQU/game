@@ -750,6 +750,7 @@
         p.dead = true;
         this.burst(p.cx, p.cy, 18, { color: '#C9BFA6', kind: 'paper' });
         this.toast((this.duel ? p.tag + ' ' : '') + '生命用完了…');
+        if (this.online && PH.Net) PH.Net.relay({ k: 'out' });
         this.checkAllDown();
         return;
       }
@@ -816,12 +817,40 @@
       if (this.players.some((p) => p.dead && !p.bubbled && !p.eliminated)) return false;
       const alive = this.players.filter((p) => !p.eliminated && !p.bubbled);
       if (alive.length) return false;
-      // 联机还有队友能赶过来救，先别判失败（泡泡自己有超时兜底）
-      if (this.online && PH.Net && PH.Net.peerCount && PH.Net.peerCount() > 1) {
-        if (this.entities.some((e) => e.type === 'bubble' && !e.dead)) return false;
-      }
+      // 联机：失败由 updateOnlineDown 判定（要等远端状态同步，不能本地先判死）
+      if (this.online) return false;
       this.failed = true;
       return true;
+    }
+
+    // 联机：只有「自己倒下 + 没有还能来救的对手」才算这轮结束
+    onlineRescuers() {
+      const out = [];
+      for (const gh of this.ghosts.values()) {
+        if (gh.gone || gh.out || gh.bubbled || gh.finished) continue;
+        out.push(gh);
+      }
+      return out;
+    }
+
+    updateOnlineDown(dt) {
+      if (!this.online || this.won || this.failed) return;
+      if (!this.player.bubbled && !this.player.eliminated) {
+        this.allDownT = 0;
+        return;
+      }
+      // 还没收到任何远端状态：先当队友在路上，别急着判整轮失败
+      if (!this.ghosts.size && PH.Net && PH.Net.players && PH.Net.players.length > 1) {
+        this.allDownT = 0;
+        return;
+      }
+      if (this.onlineRescuers().length) {
+        this.allDownT = 0;
+        return;
+      }
+      // 等远端把「我也倒了」同步过来，避免刚掉下去就把整轮判死
+      this.allDownT = (this.allDownT || 0) + dt;
+      if (this.allDownT > 2.2) this.failed = true;
     }
 
     // 本关还有几个人能继续
@@ -862,6 +891,9 @@
       if (this.netT > 0) return;
       this.netT = 0.05;
       const p = this.player;
+      // 泡泡单独发绝对坐标：掉坑时角色本体还在深渊里往下掉，
+      // 远端不能再用角色坐标推算泡泡位置，否则泡泡会画在画面外。
+      const bub = p.bubbled && p.bubble ? p.bubble : null;
       PH.Net.relay({
         k: 'st',
         x: Math.round(p.x),
@@ -871,7 +903,10 @@
         t: Math.round(this.raceTime * 10) / 10,
         hp: p.hp,
         mx: p.maxHp,
-        bub: p.bubbled ? 1 : 0,
+        bub: bub ? 1 : 0,
+        bx: bub ? Math.round(bub.x + bub.w / 2) : 0,
+        by: bub ? Math.round(bub.y + bub.h / 2) : 0,
+        lv: p.lives,
         air: p.onGround ? 0 : 1,
       });
     }
@@ -882,8 +917,11 @@
       const p = this.player;
       if (p.onGround) return;
       for (const gh of this.ghosts.values()) {
-        if (!gh.bubbled || gh.gone || gh.rescueSent) continue;
-        const bx = gh.x - 10, by = gh.y - 10, bw = 46, bh = 46;
+        if (!gh.bubbled || gh.gone || gh.out || gh.rescueSent) continue;
+        // 和远端泡泡用同一个锚点，别按对方掉进深渊的本体坐标去算
+        const bcx = gh.bubbleX || gh.x + gh.w / 2;
+        const bcy = gh.bubbleY || gh.y + gh.h - 36;
+        const bx = bcx - 23, by = bcy - 23, bw = 46, bh = 46;
         if (p.y + p.h > by + bh + 6) continue;
         if (!U.hit({ x: bx, y: by, w: bw, h: bh }, { x: p.x - 4, y: p.y - 4, w: p.w + 8, h: p.h + 8 })) continue;
         gh.rescueSent = true;
@@ -923,7 +961,10 @@
         if (frozen) pl.vx = 0;
         else pl.update(d, this);
       }
-      if (this.online) this.updateNet(d);
+      if (this.online) {
+        this.updateNet(d);
+        this.updateOnlineDown(d);
+      }
       this.player = this.players[0];
       if (this.player.coins !== this.coinCount) this.coinCount = this.player.coins;
 
@@ -2167,6 +2208,10 @@
   function failLevel() {
     const w = G.world;
     if (!w || w.failShown) return;
+    if (w.online) {
+      openOnlineFail();
+      return;
+    }
     w.failShown = true;
     if (w.duel) {
       const low = Math.min.apply(null, w.players.map((p) => p.lives));
@@ -2182,6 +2227,8 @@
       deaths: w.deaths,
       rollback: rollbackTo !== -2 && before <= 0,
       bossId: rollbackTo >= 0 ? PH.LEVEL_ORDER[rollbackTo] : '',
+      // 双人全倒下也要留在双人模式，不能重开成单人
+      mode: w.duel ? 'duel' : 'single',
     };
     PH.Audio.sfx('die');
     G.failT = 0;
@@ -2244,7 +2291,8 @@
     G.buttons = [];
     addBtn('failRetry', VW / 2 - 190, y + h - 68, 170, 48, st.rollback ? '重新开始' : '重跑本关', () => {
       G.world = null;
-      G.mode = 'single';
+      // 双人全倒下时保留双人模式，别把重开变成单人
+      G.mode = st.mode || 'single';
       startLevel(G.levelId);
     }, { color: '#FFF3D0', size: 18 });
     addBtn('failHome', VW / 2 + 20, y + h - 68, 170, 48, G.odd ? '异境列表' : '回标题', () => {
@@ -2320,7 +2368,7 @@
         weight: r.me ? '900' : '700',
       });
 
-      const right = r.gone ? '已离开' : r.finished ? r.time.toFixed(1) + ' 秒' : '未完赛';
+      const right = r.out ? '生命用完' : r.gone ? '已离开' : r.finished ? r.time.toFixed(1) + ' 秒' : '未完赛';
       PH.Paper.text(ctx, right, x + pw - 52, ry + 12, {
         size: 17,
         align: 'right',
@@ -2368,6 +2416,137 @@
       align: 'center',
       color: 'rgba(90,70,50,.5)',
     });
+  }
+
+  /* ---------------- 场景：联机失败 / 出局 ---------------- */
+  function openOnlineFail() {
+    const w = G.world;
+    if (!w || w.onlineFailShown) return;
+    w.onlineFailShown = true;
+    w.onlineDone = true;
+    if (PH.Net && PH.Net.relay) PH.Net.relay({ k: 'fail' });
+    PH.Audio.sfx('die');
+    G.onlineT = 0;
+    setState('onlineFail');
+  }
+
+  function openOnlineOut() {
+    const w = G.world;
+    if (!w || w.onlineOutShown) return;
+    w.onlineOutShown = true;
+    G.onlineT = 0;
+    setState('onlineOut');
+  }
+
+  function drawOnlineEnd(dt, lost) {
+    G.onlineT = (G.onlineT || 0) + dt;
+    const w = G.world;
+    if (!w) {
+      setState('title');
+      return;
+    }
+    const rows = onlineStandings(w);
+    w.draw();
+    ctx.fillStyle = 'rgba(30,20,16,0.62)';
+    ctx.fillRect(0, 0, VW, VH);
+
+    const pw = 552, ph = 238 + rows.length * 44, x = (VW - pw) / 2, y = (VH - ph) / 2;
+    PH.Paper.stackPanel(ctx, x, y, pw, ph, { fill: '#FCF6E6', fill2: '#EFE2C4', seed: 109, shadowAlpha: 0.58 });
+    PH.Paper.tape(ctx, x + 44, y + 2, 104, -0.2);
+    PH.Paper.tape(ctx, x + pw - 152, y + 4, 96, 0.16);
+
+    PH.Paper.text(ctx, lost ? '这轮没跑完' : '你已出局', VW / 2, y + 62, {
+      size: 34,
+      align: 'center',
+      color: lost ? '#8E2F26' : '#3A2A1E',
+      font: PH.Fonts.hand,
+      weight: '900',
+    });
+    PH.Paper.text(
+      ctx,
+      lost ? '所有人都倒下了 · 房间还在，可以直接再来一局' : '其他纸片还在跑，先在场边等一会儿',
+      VW / 2,
+      y + 90,
+      { size: 14, align: 'center', color: 'rgba(90,70,50,.72)' }
+    );
+
+    rows.forEach((r, i) => {
+      const ry = y + 118 + i * 44;
+      const rank = i + 1;
+      ctx.save();
+      ctx.fillStyle = rank === 1 ? '#E2A93B' : rank === 2 ? '#B9BFC7' : rank === 3 ? '#C89A6B' : 'rgba(120,95,70,.28)';
+      ctx.beginPath();
+      ctx.arc(x + 52, ry + 10, 14, 0, 7);
+      ctx.fill();
+      ctx.restore();
+      PH.Paper.text(ctx, String(rank), x + 52, ry + 15, {
+        size: 14,
+        align: 'center',
+        color: '#FFF8EC',
+        weight: '900',
+      });
+      ctx.save();
+      ctx.fillStyle = r.color;
+      ctx.beginPath();
+      ctx.arc(x + 86, ry + 6, 5, 0, 7);
+      ctx.fill();
+      ctx.restore();
+      const nm = Array.from(r.name).slice(0, 8).join('') + (r.me ? '（你）' : '');
+      PH.Paper.text(ctx, nm, x + 102, ry + 12, {
+        size: 17,
+        color: '#3A2A1E',
+        weight: r.me ? '900' : '700',
+      });
+      const right = r.out ? '生命用完' : r.gone ? '已离开' : r.finished ? r.time.toFixed(1) + ' 秒' : '未完赛';
+      PH.Paper.text(ctx, right, x + pw - 48, ry + 12, {
+        size: 16,
+        align: 'right',
+        color: r.finished ? '#3F8B46' : r.out ? '#C8443A' : 'rgba(90,70,50,.55)',
+        weight: '800',
+      });
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = '#6B5136';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 5]);
+      ctx.beginPath();
+      ctx.moveTo(x + 38, ry + 30);
+      ctx.lineTo(x + pw - 38, ry + 30);
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    G.buttons = [];
+    const by = y + ph - 70;
+    if (lost && PH.Net.isHost()) {
+      addBtn('onAgain', VW / 2 - 218, by, 140, 50, '再来一局', () => {
+        PH.Net.relay({ k: 'start', level: G.levelId });
+        PH.startOnlineRace(G.levelId);
+      }, { color: '#FFF3D0', size: 18 });
+      addBtn('onRoom', VW / 2 - 64, by, 140, 50, '回到房间', () => {
+        PH.leaveOnlineRace(true);
+        PH.Online.open();
+      }, { size: 17 });
+      addBtn('onHome', VW / 2 + 90, by, 120, 50, '回标题', () => {
+        PH.leaveOnlineRace(false);
+      }, { size: 17 });
+    } else {
+      addBtn('onRoom', VW / 2 - 150, by, 140, 50, '回到房间', () => {
+        PH.leaveOnlineRace(true);
+        PH.Online.open();
+      }, { color: '#FFF3D0', size: 17 });
+      addBtn('onHome', VW / 2 + 10, by, 140, 50, '回标题', () => {
+        PH.leaveOnlineRace(false);
+      }, { size: 17 });
+    }
+  }
+
+  function drawOnlineFail(dt) {
+    drawOnlineEnd(dt, true);
+  }
+
+  function drawOnlineOut(dt) {
+    drawOnlineEnd(dt, false);
   }
 
   /* ---------------- 场景：挑战结算 ---------------- */
@@ -2807,6 +2986,7 @@
   /* ---------------- 联机：幽灵 + HUD ---------------- */
   function drawGhostSprite(ctx, world) {
     const g = this;
+    if (g.gone || g.out) return;
     const h = 86;
     const spr = g.spr || 'hero';
     const s = PH.Assets.sizeForH(spr, h);
@@ -2815,27 +2995,29 @@
     const bob = g.pose === 'run' ? Math.sin(g.animT * 15) * 2.2 : Math.sin(g.animT * 2.4) * 1.2;
 
     if (g.bubbled) {
-      // 倒下的对手也是一颗泡泡，跳上去才能戳破
-      const bcy = foot - 36;
+      // 倒下的对手也是一颗泡泡，跳上去才能戳破。
+      // 优先用对方发来的泡泡锚点：掉坑时本体已经坠出画面，不能再按 foot 推。
+      const bcx = g.bubbleX || cx;
+      const bcy = g.bubbleY || foot - 36;
       const r = 25 + Math.sin(g.animT * 3) * 1.2;
       ctx.save();
-      const grad = ctx.createRadialGradient(cx - r * 0.35, bcy - r * 0.4, r * 0.15, cx, bcy, r);
+      const grad = ctx.createRadialGradient(bcx - r * 0.35, bcy - r * 0.4, r * 0.15, bcx, bcy, r);
       grad.addColorStop(0, 'rgba(255,255,255,0.7)');
       grad.addColorStop(1, 'rgba(160,210,230,0.24)');
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(cx, bcy, r, 0, 7);
+      ctx.arc(bcx, bcy, r, 0, 7);
       ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.85)';
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.restore();
-      PH.Assets.draw(ctx, spr, cx - s.w * 0.27, bcy - 17, s.w * 0.54, 33, {
+      PH.Assets.draw(ctx, spr, bcx - s.w * 0.27, bcy - 17, s.w * 0.54, 33, {
         flip: g.facing < 0,
         alpha: 0.85,
         shadow: false,
       });
-      PH.Paper.text(ctx, '↑ 跳起来戳破', cx, bcy - r - 8, {
+      PH.Paper.text(ctx, '↑ 跳起来戳破', bcx, bcy - r - 8, {
         size: 11,
         align: 'center',
         color: '#3A2A1E',
@@ -2854,16 +3036,19 @@
 
       PH.Assets.draw(ctx, spr, cx - s.w / 2, foot - h + bob, s.w, h, {
         flip: g.facing < 0,
-        alpha: 0.5,
+        alpha: 1,
         shadow: false,
       });
     }
 
-    // 名字牌
-    const labelY = foot - h - 7 + bob + (g.labelDy || 0);
+    // 名字牌：泡泡状态挂在泡泡上方，别跟着掉进坑里的本体跑
+    const labelX = g.bubbled ? (g.bubbleX || cx) : cx;
+    const labelY = g.bubbled
+      ? (g.bubbleY || foot - 36) - 40
+      : foot - h - 7 + bob + (g.labelDy || 0);
     ctx.save();
     ctx.globalAlpha = 0.92;
-    PH.Paper.text(ctx, g.name, cx, labelY, {
+    PH.Paper.text(ctx, g.name, labelX, labelY, {
       size: 11.5,
       align: 'center',
       color: g.color,
@@ -2873,7 +3058,7 @@
     });
     ctx.fillStyle = g.color;
     ctx.beginPath();
-    ctx.arc(cx - measureName(g.name) * 0.5 - 8, labelY - 4, 3, 0, 7);
+    ctx.arc(labelX - measureName(g.name) * 0.5 - 8, labelY - 4, 3, 0, 7);
     ctx.fill();
     ctx.restore();
   }
@@ -3325,8 +3510,21 @@
       if (pl.dead && !pl.bubbled && !pl.eliminated && pl.deadT > 0.9) w.downPlayer(pl);
     }
     if (w.failed) {
-      failLevel();
+      if (w.online) openOnlineFail();
+      else failLevel();
       return;
+    }
+    // 联机里命用完了：队友还在跑就进观战/等待页，别退回单人失败页
+    if (w.online && w.player.eliminated) {
+      if (w.onlineRescuers().length) {
+        w.outT = (w.outT || 0) + dt;
+        if (w.outT > 1.4) {
+          openOnlineOut();
+          return;
+        }
+      } else {
+        w.outT = 0;
+      }
     }
   }
 
@@ -3682,6 +3880,7 @@
         name: (PH.Profiles && PH.Profiles.name()) || '你',
         color: '#E2574C',
         me: true,
+        out: !!w.player.eliminated,
         pct: U.clamp((w.player.cx - start) / span, 0, 1),
         hp: w.player.hp,
         maxHp: w.player.maxHp,
@@ -3696,6 +3895,7 @@
         color: g.color,
         me: false,
         gone: !!g.gone,
+        out: !!g.out,
         pct: U.clamp((g.x + 13 - start) / span, 0, 1),
         hp: typeof g.hp === 'number' ? g.hp : 3,
         maxHp: g.maxHp || 3,
@@ -3746,7 +3946,11 @@
           animT: 0,
           hp: 3,
           maxHp: 3,
+          lives: 5,
           bubbled: false,
+          bubbleX: 0,
+          bubbleY: 0,
+          out: false,
           finished: false,
           time: null,
           draw: drawGhostSprite,
@@ -3759,10 +3963,30 @@
       g.pose = d.po || 'idle';
       if (typeof d.hp === 'number') g.hp = Math.max(0, d.hp);
       if (typeof d.mx === 'number') g.maxHp = Math.max(1, d.mx);
+      if (typeof d.lv === 'number') g.lives = Math.max(0, d.lv);
       g.bubbled = !!d.bub;
+      g.bubbleX = d.bub ? d.bx || 0 : 0;
+      g.bubbleY = d.bub ? d.by || 0 : 0;
       g.air = !!d.air;
       if (!g.bubbled) g.rescueSent = false;
       g.lastSeen = G.stateT;
+    } else if (d.k === 'out') {
+      // 对方命用完了：从赛道上撤掉，别留一个卡住的影子
+      const g = w.ghosts.get(from);
+      if (g) {
+        g.out = true;
+        g.bubbled = false;
+        g.bubbleX = 0;
+        g.bubbleY = 0;
+      }
+    } else if (d.k === 'fail') {
+      const g = w.ghosts.get(from);
+      if (g) {
+        g.out = true;
+        g.bubbled = false;
+        g.bubbleX = 0;
+        g.bubbleY = 0;
+      }
     } else if (d.k === 'rescue') {
       // 有人跳起来戳破了我的泡泡
       if (!d.to || d.to !== PH.Net.myId) return;
@@ -3795,6 +4019,11 @@
 
   PH.startOnlineRace = function (id) {
     if (!PH.Levels[id]) return;
+    // 上一轮把命跑空了：新开一轮补满，别让「再来一局」一出生就出局
+    if (Save.lives <= 0) {
+      Save.lives = LIVES_BASE;
+      Save.save();
+    }
     G.mode = 'online';
     G.onlineT = 0;
     startLevel(id);
@@ -3941,6 +4170,12 @@
         break;
       case 'onlineClear':
         drawOnlineClear(dt);
+        break;
+      case 'onlineFail':
+        drawOnlineFail(dt);
+        break;
+      case 'onlineOut':
+        drawOnlineOut(dt);
         break;
       case 'levelFail':
         drawLevelFail(dt);
