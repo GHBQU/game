@@ -3044,7 +3044,7 @@
     // 名字牌：泡泡状态挂在泡泡上方，别跟着掉进坑里的本体跑
     const labelX = g.bubbled ? (g.bubbleX || cx) : cx;
     const labelY = g.bubbled
-      ? (g.bubbleY || foot - 36) - 40
+      ? (g.bubbleY || foot - 36) - 58
       : foot - h - 7 + bob + (g.labelDy || 0);
     ctx.save();
     ctx.globalAlpha = 0.92;
