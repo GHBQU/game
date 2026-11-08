@@ -1,19 +1,17 @@
 /* 纸片勇者 — 游戏厅桥接层
  *
- * 联机拓扑（只要「那台服务器电脑」开着，别的设备随便在哪个网络）：
+ * 联机拓扑（默认全走 Cloudflare，房主电脑不用开机）：
  *
  *   手机(流量) ┐
- *   平板(别的 Wi-Fi) ┼──> 固定游戏网址 ──读 GitHub 上的 endpoint.json──> 当前公网隧道地址
- *   电脑(别的城市) ┘                                                        │
- *                                    <──────── WebSocket /ws ─────────────┘
- *                                              全部连回同一台本机服务器、同一个房间
+ *   平板(别的 Wi-Fi) ┼──> 固定游戏网址 ─wss─> Cloudflare Worker + Durable Object ─> 同一个房间
+ *   电脑(别的城市) ┘
  *
- * 1. 端点发现：js/config.js 里列出「GitHub 请求地址」，tunnel.py 每次隧道换址都会更新它。
- *    同时读同目录 endpoint.json 兜底；逐个 /health 探活，挑最快且健康的那个。
- * 2. 公网页面会自动定时重试：朋友可以先把页面开着，服务器一开机就自己连上，不用刷新；
- *    隧道换地址后也会自动跟到新地址。?server= 可强制指定（邀请链接用它，失效时自动回退）。
- * 3. 账号：服务在线时存在 Cloudflare Durable Object（本机 net_server 是兜底），
- *    兼容游戏厅（../../arcade.js）账号；服务没开就退回本机浏览器凭据 + 离线密钥。
+ * 1. 端点发现：优先探 js/cloud.js 里的固定 Cloudflare 地址；
+ *    只有它不通才去读 js/config.js / endpoint.json 里的旧本机隧道地址（可选兜底）。
+ * 2. ?server= 可强制指定（邀请链接用它，失效时自动回退）。
+ *    Cloudflare 地址固定，不需要每次重启更新，也不会出现旧链接失效。
+ * 3. 账号：服务在线时存在 Cloudflare Durable Object，兼容游戏厅（../../arcade.js）账号；
+ *    所有服务器都不在线才退回本机浏览器凭据 + 离线密钥。
  */
 (function (PH) {
   const K_SERVER = 'paperhero.server'; // 手动/邀请指定的服务器地址

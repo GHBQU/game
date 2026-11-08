@@ -4,5 +4,5 @@
  */
 (function (PH) {
   PH.Config = PH.Config || {};
-  PH.Config.cloudUrl = 'https://paper-hero.wyc20141215.workers.dev';
+  PH.Config.cloudUrl = 'https://paper-hero.ghbqu.dpdns.org';
 })(window.PH);
