@@ -47,6 +47,11 @@
       }
     },
 
+    // Cloudflare Worker 固定地址：填在 js/cloud.js，不随隧道换址
+    cloudUrl() {
+      return this.normalize(PH.Config && PH.Config.cloudUrl);
+    },
+
     // 邀请链接 ?server= 优先级最高，并记到本机，刷新后仍连同一台服务器
     manual() {
       try {
@@ -175,6 +180,8 @@
       // 页面本身就由那台服务发出时，同源地址已经在列表里，别再塞一个等价的 localhost 造成两端选路不一致
       const hereIsServer = !!here && !/\/games\//.test(location.pathname) && /^(localhost|127\.0\.0\.1)/.test(location.hostname);
       if (!manual && localHost && !hereIsServer) list.push('http://localhost:8777');
+      const cloud = this.cloudUrl();
+      if (cloud) list.unshift(cloud);
       if (manual) list.unshift(manual);
       const out = [];
       list.forEach((u) => {
@@ -252,10 +259,13 @@
         this.emit('change');
         return false;
       }
-      // 两台设备必须连同一台服务器，房号才对得上：邀请链接 / 手动指定的地址只要活着就强制选它
+      // 两台设备必须连同一台服务器，房号才对得上：
+      // 邀请链接 / 手动指定 > Cloudflare 固定地址 > 最快端点（本机隧道兜底）
       const manual = this.manual();
       const forced = manual && hits.find((h) => h.ep === manual);
-      const best = forced || hits[0];
+      const cloud = this.cloudUrl();
+      const cloudHit = cloud && hits.find((h) => h.ep === cloud);
+      const best = forced || cloudHit || hits[0];
       this.endpoint = best.ep;
       this.endpoints = hits.map((h) => h.ep);
       this.serverId = (best.info && best.info.sid) || '';
