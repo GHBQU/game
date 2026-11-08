@@ -128,7 +128,7 @@
           '就能用本机保存的主页账号继续玩；不登录也能直接单机。</p>' +
           '<button class="acc-btn primary" data-act="toKey">输入离线密钥</button>' +
           '<button class="acc-btn ghost" data-act="toLogin">用本机账号登录</button>' +
-          '<p class="acc-tip">' + homeLink + '。服务在线时用户名和密码（加盐摘要）存在房主电脑上，服务器不在线才存本机浏览器。</p>'
+          '<p class="acc-tip">' + homeLink + '。账号密码只存加盐摘要：服务在线存房主电脑，离线存本机浏览器。</p>'
         );
       }
       return (
@@ -138,7 +138,7 @@
         '<span class="id-badge">未登录</span></div>' +
         '<p class="id-note">账号和档案是同一个：登录后会按账号名自动对上进度。服务在线时账号存在房主电脑上，别的设备也能登录。</p>' +
         '<button class="acc-btn primary" data-act="toLogin">登录已有账号</button>' +
-        '<p class="acc-tip">' + homeLink + '。服务在线时用户名和密码（加盐摘要）存在房主电脑上，服务器不在线才存本机浏览器。</p>'
+        '<p class="acc-tip">' + homeLink + '。账号密码只存加盐摘要：服务在线存房主电脑，离线存本机浏览器。</p>'
       );
     },
 
