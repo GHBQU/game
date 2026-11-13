@@ -182,6 +182,9 @@ html[data-style="clean"] .num{
 .art-ip .small{font-size:8.5px;letter-spacing:.44em;text-transform:uppercase;margin-top:7px;opacity:.85}
 .art-ip .frame{position:absolute;inset:9px;border:1px solid rgba(255,255,255,.42)}
 .art-ip .stamp{position:absolute;right:-26px;bottom:-30px;width:96px;height:96px;border:1.5px solid rgba(255,255,255,.3);border-radius:50%}
+.art-kart{background:linear-gradient(150deg,#1e3fa8 0%,#7a2bd6 48%,#e63946 100%)}
+html[data-style="pixel"] .art-kart{background:linear-gradient(150deg,#1b1f4b,#e60067)}
+html[data-style="glitch"] .art-kart{background:linear-gradient(150deg,#141824,#6b1020)}
 .art-night{background:#0a0d18}
 .art-night::before{
   content:"";position:absolute;inset:0;
@@ -1335,17 +1338,17 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <h1 data-text="游戏厅">游戏厅</h1>
       <div class="sub">
         <span class="en">Arcade</span>
-        <span class="cn">三个游戏，零安装</span>
+        <span class="cn">四个游戏，零安装</span>
       </div>
     </div>
 
     <div class="hero-card">
       <p class="lede">
-        三个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
+        四个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
       </p>
       <dl class="specs">
-        <div><dt>收录</dt><dd>03 款</dd></div>
-        <div><dt>体积</dt><dd>3.2 MB</dd></div>
+        <div><dt>收录</dt><dd>04 款</dd></div>
+        <div><dt>体积</dt><dd>4.5 MB</dd></div>
         <div><dt>后端</dt><dd>可选 · 本机隧道</dd></div>
         <div><dt>追踪</dt><dd>无</dd></div>
       </dl>
@@ -1353,7 +1356,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </section>
 
   <div class="bar">
-    <span>目录 <span class="count">01—03</span></span>
+    <span>目录 <span class="count">01—04</span></span>
     <span class="hint" id="bar-hint">点击任意条目开始</span>
   </div>
 
@@ -1458,6 +1461,43 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       </div>
     </a>
 
+
+    <a class="entry" href="games/super-kart-8/">
+      <div class="row">
+        <div class="num">04</div>
+
+        <div class="art art-ip art-kart" aria-hidden="true">
+          <span class="frame"></span>
+          <span class="stamp"></span>
+          <span class="lbl">
+            <span class="big">KART</span>
+            <span class="small">Super 8</span>
+          </span>
+        </div>
+
+        <div class="body">
+          <span class="title">超级卡丁车 8</span>
+          <span class="title-cn">SUPER KART 8</span>
+          <span class="desc">浏览器 3D 卡丁车竞速。4 个杯赛 / 20 条赛道、8 位车手、8 种道具、漂移迷你涡轮、反重力翻滚、滑翔与救援云演出；赛道、车辆、角色、贴图、音效全部由代码实时生成，零外部素材。支持最多 8 人联机对战（房主权威 + WebRTC P2P），单机打开就能玩。</span>
+          <span class="tags">
+            <span>竞速</span><span>3D / 程序化生成</span><span>单人 / 联机</span><span>键盘</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">时长</span><span class="v">单局 2—5 分钟</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">WASD / 方向键</span></div>
+          <div class="kv"><span class="k">联机</span><span class="v">官方站点登录</span></div>
+          <div class="go">
+            <span>进入赛道</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
   </main>
 
   <div class="y2k-ad only-portal" aria-hidden="true">
@@ -1487,7 +1527,8 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <b>IP, PLEASE</b> 由 <a href="https://github.com/ip-please/ip-please.github.io" target="_blank" rel="noopener">ctnyanya</a> 开发，MIT 许可，此处为静态镜像。<br>
       <b>暗夜幸存者</b> 由 wyc &amp; DeepSeek 开发。<br>
       <b>纸片勇者</b> 的角色由一个小朋友手绘剪贴，代码与纸艺包装由 WorkBuddy 完成。<br>
-      三个游戏都不加载外部资源，断网也能玩；纸片勇者的联机走小宇本机的隧道，服务没开时自动变单机。
+      <b>超级卡丁车 8</b> 的赛道 / 车辆 / 角色 / 音效全部程序化生成，零外部素材。<br>
+      四个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
     </div>
     <div class="sign">
       <span class="big">小宇.GAY</span>

@@ -1,14 +1,15 @@
 # 游戏厅 · 小宇.GAY
 
-两个纯静态网页游戏的收录站。五套可切换视觉风格，无构建步骤、无依赖、无后端、无追踪。
+四个纯静态网页游戏的收录站。五套可切换视觉风格，无构建步骤、无依赖、无后端、无追踪。
 
-## 三个游戏
+## 四个游戏
 
 | # | 游戏 | 说明 |
 |---|------|------|
 | 01 | IP, PLEASE | 像素剧情，静态镜像 |
 | 02 | 暗夜幸存者 | 顶视角生存射击 |
 | 03 | 纸片勇者 | 手绘纸片横版闯关，8 关 + 双人同屏 + 最多 4 人联机 |
+| 04 | 超级卡丁车 8 | 浏览器 3D 竞速，20 赛道 / 4 杯赛 / 最多 8 人联机 |
 
 ### 联机怎么跑到公网
 
@@ -58,8 +59,13 @@
     │   ├── assets.js  en.js  i18n.js  gfx.js  sfx.js
     │   ├── docs.js    data.js  booth.js  events.js  screens.js  main.js
     │   └── LICENSE
-    └── night-survivors/
-        └── index.html            # 暗夜幸存者（单文件 85 KB）
+    ├── night-survivors/
+    │   └── index.html            # 暗夜幸存者（单文件 85 KB）
+    ├── paper-hero/               # 纸片勇者
+    └── super-kart-8/
+        ├── index.html            # 超级卡丁车 8 入口
+        ├── css/  js/  lib/       # 相对路径引用，可直接静态托管
+        └── README.md
 ```
 
 ## 两种跑法
@@ -149,6 +155,7 @@ python3 -m http.server 8899
 |---|------|------|------|------|
 | 01 | IP, PLEASE · 请出示你的 IP | 剧情 / 模拟 / 像素 | [ctnyanya](https://github.com/ip-please/ip-please.github.io) | MIT |
 | 02 | 暗夜幸存者 · Night Survivors | 生存 / Roguelite | wyc & DeepSeek | — |
+| 04 | 超级卡丁车 8 · Super Kart 8 | 竞速 / 3D / 联机 | 本仓库 | 原创程序化生成 |
 
 `IP, PLEASE` 为原仓库的静态镜像，仅保留运行时所需文件（去掉了 `media/`、`tools/` 与文档），并在页面左上角加了一个返回游戏厅的入口。原始版权与 MIT 许可见 `games/ip-please/LICENSE`。
 

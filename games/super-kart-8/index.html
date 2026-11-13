@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Super Kart 8 — 超级卡丁车 8</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23e63946'/%3E%3Ccircle cx='32' cy='32' r='19' fill='%23fff'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23ffd60a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/lobby.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="gl"></canvas>
+
+  <!-- ================= HUD ================= -->
+  <div id="hud" class="hidden">
+    <div class="hud-corner tl">
+      <div class="pos-badge">
+        <span class="pos-num" id="posNum">1</span>
+        <span class="pos-suf" id="posSuf">st</span>
+      </div>
+      <div class="lap-badge">
+        <span class="lap-label">LAP</span>
+        <span class="lap-num" id="lapNum">1</span>
+        <span class="lap-total">/ 3</span>
+      </div>
+      <div class="time-badge" id="hudTime">00"000</div>
+      <div class="track-tag" id="hudTrack">蘑菇平原</div>
+      <div class="net-badge" id="netBadge">联机</div>
+    </div>
+
+    <div class="hud-corner tr">
+      <div class="minimap-wrap">
+        <canvas id="minimap" width="260" height="260"></canvas>
+      </div>
+      <div class="lap-times" id="lapTimes"></div>
+    </div>
+
+    <div class="hud-corner bl">
+      <div class="item-slot empty" id="itemSlot">
+        <div class="item-icon" id="itemIcon"></div>
+        <div class="item-count" id="itemCount"></div>
+        <div class="item-roulette" id="itemRoulette"></div>
+      </div>
+      <div class="drift-meter" id="driftMeter">
+        <div class="drift-fill" id="driftFill"></div>
+        <div class="drift-marks"><i></i><i></i><i></i></div>
+      </div>
+    </div>
+
+    <div class="hud-corner br">
+      <div class="coin-badge" id="coinBadge">
+        <span class="coin-icon"></span>
+        <span class="coin-num" id="coinNum">0</span>
+      </div>
+      <div class="speedo">
+        <div class="speedo-bar"><i id="speedFill"></i></div>
+        <div class="speedo-text"><span id="speedNum">0</span><em>km/h</em></div>
+      </div>
+    </div>
+
+    <div id="centerMsg" class="center-msg"></div>
+    <div id="lapFlash" class="lap-flash"></div>
+    <div id="wrongWay" class="wrong-way hidden">⚠ 逆行</div>
+    <div id="hintBar" class="hint-bar"></div>
+
+    <!-- 救援提示 -->
+    <div id="rescueBox" class="rescue-box">
+      <div class="rescue-head">
+        <span class="rescue-icon"></span>
+        <span class="rescue-title">救援中</span>
+        <span class="rescue-count" id="rescueCount">5.0</span>
+      </div>
+      <div class="rescue-bar"><i id="rescueFill"></i></div>
+      <div class="rescue-sub" id="rescueSub">救援云正在把车吊回赛道…</div>
+    </div>
+  </div>
+
+  <!-- ================= 加载 ================= -->
+  <div id="loading" class="screen loading-screen">
+    <div class="load-box">
+      <div class="load-logo">SUPER KART <b>8</b></div>
+      <div class="load-bar"><i id="loadFill"></i></div>
+      <div class="load-text" id="loadText">正在生成赛道…</div>
+    </div>
+  </div>
+
+  <!-- ================= 主菜单 ================= -->
+  <div id="menu" class="screen hidden">
+    <div class="menu-veil"></div>
+    <div class="menu-inner">
+      <header class="menu-head">
+        <div class="logo">
+          <span class="logo-super">SUPER</span>
+          <span class="logo-kart">KART<i>8</i></span>
+        </div>
+        <p class="subtitle">致敬《马力欧卡丁车 8》 · 20 条赛道 / 4 个杯赛 · 全程序化实时 3D</p>
+      </header>
+
+      <div class="menu-body">
+        <section class="panel char-panel">
+          <h2><span class="dot"></span>选择车手</h2>
+          <div class="char-grid" id="charGrid"></div>
+          <div class="char-info">
+            <div class="ci-name" id="ciName">马可</div>
+            <div class="ci-title" id="ciTitle">水管工</div>
+            <p class="ci-blurb" id="ciBlurb">全能型选手，各项性能均衡。</p>
+            <div class="stat-rows" id="statRows"></div>
+          </div>
+        </section>
+
+        <section class="panel track-panel">
+          <h2><span class="dot"></span>选择赛道</h2>
+          <div class="cup-tabs" id="cupTabs"></div>
+          <p class="cup-desc" id="cupDesc"></p>
+          <div class="track-list" id="trackList"></div>
+          <label class="switch cup-switch">
+            <input type="checkbox" id="cupToggle"><span></span>杯赛模式（本杯 5 条赛道连跑）
+          </label>
+        </section>
+
+        <section class="panel opt-panel">
+          <h2><span class="dot"></span>比赛设置</h2>
+          <div class="opt-group">
+            <label>引擎等级</label>
+            <div class="seg" id="ccSeg">
+              <button data-cc="50">50cc</button>
+              <button data-cc="100" class="on">100cc</button>
+              <button data-cc="150">150cc</button>
+              <button data-cc="200">200cc</button>
+            </div>
+          </div>
+          <div class="opt-group">
+            <label>圈数</label>
+            <div class="seg" id="lapSeg">
+              <button data-laps="1">1</button>
+              <button data-laps="2">2</button>
+              <button data-laps="3" class="on">3</button>
+              <button data-laps="5">5</button>
+            </div>
+          </div>
+          <div class="opt-group">
+            <label>AI 难度</label>
+            <div class="seg" id="diffSeg">
+              <button data-diff="0.8">轻松</button>
+              <button data-diff="1" class="on">普通</button>
+              <button data-diff="1.12">困难</button>
+              <button data-diff="1.25">专家</button>
+            </div>
+            <div class="opt-note">越靠后名次，道具箱开出的道具越强（落后补偿）。</div>
+          </div>
+          <div class="opt-group">
+            <label>画质</label>
+            <div class="seg seg-sm" id="qualitySeg">
+              <button data-q="high" class="on">高</button>
+              <button data-q="medium">中</button>
+              <button data-q="low">低</button>
+            </div>
+          </div>
+          <div class="opt-group toggles">
+            <label class="switch"><input type="checkbox" id="musicToggle" checked><span></span>音乐</label>
+            <label class="switch"><input type="checkbox" id="sfxToggle" checked><span></span>音效</label>
+            <label class="switch"><input type="checkbox" id="camToggle"><span></span>广角镜头</label>
+          </div>
+
+          <div class="selected-summary" id="selSummary"></div>
+
+          <button id="startBtn" class="btn-primary">
+            <span>开始比赛</span>
+            <em>ENTER</em>
+          </button>
+
+          <button id="netBtn" class="btn-ghost net-btn">
+            <span>联机大厅</span>
+            <em>多人</em>
+          </button>
+
+          <div class="controls-help compact">
+            <div class="ch-list">
+              <span class="ch-item"><kbd>WASD</kbd>加速 / 转向 / 刹车</span>
+              <span class="ch-item"><kbd>SPACE</kbd>跳跃 · 漂移</span>
+              <span class="ch-item"><kbd>E</kbd>使用道具</span>
+              <span class="ch-item"><kbd>C</kbd>切换视角</span>
+              <span class="ch-item"><kbd>ESC</kbd>暂停（可看键位）</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="menu-foot">
+        <span>全程序化生成 · 无外部素材 · Three.js</span>
+        <span id="fpsTag">60 FPS</span>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ================= 暂停 ================= -->
+  <div id="pause" class="screen hidden pause-screen">
+    <div class="pause-wrap">
+
+      <div class="pause-box panel">
+        <div class="pause-head">
+          <div class="pause-title">已暂停</div>
+          <div class="pause-sub" id="pauseSub">蘑菇平原 · LAP 1 / 3</div>
+        </div>
+        <button class="btn-primary" id="resumeBtn"><span>继续比赛</span><em>ESC</em></button>
+        <button class="btn-ghost" id="restartBtn">重新开始</button>
+        <button class="btn-ghost" id="quitBtn">返回菜单</button>
+        <div class="pause-opts">
+          <label class="switch"><input type="checkbox" id="musicToggle2" checked><span></span>音乐</label>
+          <label class="switch"><input type="checkbox" id="sfxToggle2" checked><span></span>音效</label>
+        </div>
+        <div class="pause-quality">
+          <label>画质</label>
+          <div class="seg seg-sm" id="qualitySeg2">
+            <button data-q="high" class="on">高</button>
+            <button data-q="medium">中</button>
+            <button data-q="low">低</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pause-keys panel">
+        <h3><span class="dot"></span>键位一览</h3>
+        <div class="kbd-groups">
+          <div class="kbd-group">
+            <div class="kg-title">驾驶</div>
+            <div class="kbd-row"><span class="ks"><kbd>W</kbd><kbd>↑</kbd></span><span>加速</span></div>
+            <div class="kbd-row"><span class="ks"><kbd>S</kbd><kbd>↓</kbd></span><span>刹车 / 倒车</span></div>
+            <div class="kbd-row"><span class="ks"><kbd>A</kbd><kbd>D</kbd></span><span>左右转向</span></div>
+            <div class="kbd-row"><span class="ks"><kbd class="wide">SPACE</kbd></span><span>跳跃 / 按住漂移</span></div>
+          </div>
+          <div class="kbd-group">
+            <div class="kg-title">动作</div>
+            <div class="kbd-row"><span class="ks"><kbd>E</kbd><kbd>SHIFT</kbd></span><span>使用道具</span></div>
+            <div class="kbd-row"><span class="ks"><kbd>C</kbd></span><span>切换视角</span></div>
+            <div class="kbd-row"><span class="ks"><kbd class="wide">ESC</kbd></span><span>暂停 / 继续</span></div>
+            <div class="kbd-row"><span class="ks"><kbd>R</kbd></span><span>重开本场</span></div>
+          </div>
+          <div class="kbd-group">
+            <div class="kg-title">手柄</div>
+            <div class="kbd-row"><span class="ks"><kbd class="wide">左摇杆</kbd></span><span>转向</span></div>
+            <div class="kbd-row"><span class="ks"><kbd class="wide">RT</kbd></span><span>加速</span></div>
+            <div class="kbd-row"><span class="ks"><kbd class="wide">LT</kbd></span><span>刹车</span></div>
+            <div class="kbd-row"><span class="ks"><kbd class="wide">A</kbd></span><span>漂移 / 跳跃</span></div>
+            <div class="kbd-row"><span class="ks"><kbd class="wide">X</kbd></span><span>使用道具</span></div>
+          </div>
+        </div>
+        <div class="kbd-tips">
+          <div class="tip"><b>漂移蓄力</b>按住 SPACE 并转向，火花由蓝 → 橙 → 紫，松手获得迷你涡轮。</div>
+          <div class="tip"><b>火箭起步</b>倒计时「2」落下的瞬间按下加速，起步直接获得加速。</div>
+          <div class="tip"><b>空中特技</b>腾空时按 SPACE 做特技，落地获得一段加速。</div>
+          <div class="tip"><b>金币</b>每枚金币提升极速，上限 10 枚；被击中会掉落。</div>
+          <div class="tip"><b>落后补偿</b>名次越靠后，道具箱越容易开出三连蘑菇、星星、闪电与炮弹；第 1 名只有防御道具。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= 结算 ================= -->
+  <div id="results" class="screen hidden results-screen">
+    <div class="res-inner">
+      <div class="res-head">
+        <div class="res-pos" id="resPos">1<em>st</em></div>
+        <div class="res-title">
+          <h2 id="resTitle">冠军！</h2>
+          <p id="resSub">总用时 01'23"456 · 最快单圈 00'26"112</p>
+        </div>
+      </div>
+      <div class="cup-strip" id="cupStrip"></div>
+      <div class="res-table" id="resTable"></div>
+      <div class="res-actions">
+        <button class="btn-primary" id="againBtn">再来一局</button>
+        <button class="btn-ghost" id="menuBtn">返回菜单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 杯赛总成绩 ================= -->
+  <div id="cupFinal" class="screen hidden results-screen">
+    <div class="res-inner cup-inner">
+      <div class="cup-head">
+        <div class="cup-badge" id="cupBadge">蘑菇杯</div>
+        <div class="cup-title">
+          <h2 id="cupFinalTitle">杯赛冠军！</h2>
+          <p id="cupFinalSub">5 条赛道 · 总积分 60</p>
+        </div>
+      </div>
+      <div class="res-table" id="cupTable"></div>
+      <div class="res-actions">
+        <button class="btn-primary" id="cupAgainBtn">再跑一次</button>
+        <button class="btn-ghost" id="cupMenuBtn">返回菜单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 联机大厅 ================= -->
+  <div id="lobby" class="screen hidden lobby-screen">
+    <div class="lobby-inner">
+      <header class="lobby-head">
+        <div class="lobby-title">联机大厅<em>MULTIPLAYER</em></div>
+        <div class="lobby-user" id="lobbyUser"></div>
+        <button class="btn-ghost small" id="lobbyClose">返回主菜单</button>
+      </header>
+
+      <div class="lobby-toast" id="lobbyToast"></div>
+
+      <!-- 登录门 -->
+      <section class="lobby-gate" id="lobbyGate">
+        <div class="gate-card panel">
+          <div class="gate-icon"></div>
+          <h3>联机需要先登录</h3>
+          <p>房间列表、玩家名单和比赛成绩都保存在 WorkBuddy 云服务里，需要账号来确认「你是你」。</p>
+          <button class="btn-primary" id="loginBtn"><span>使用 WorkBuddy 登录</span></button>
+          <p class="gate-note" id="gateNote">登录后会回到这个页面，刚才选的赛道不会丢。</p>
+        </div>
+      </section>
+
+      <!-- 浏览房间 -->
+      <section class="lobby-browse" id="lobbyBrowse">
+        <div class="browse-left panel">
+          <h3><span class="dot"></span>创建房间</h3>
+          <label class="lobby-field"><span>房间名</span><input id="roomName" maxlength="20" placeholder="我的卡丁车房间"></label>
+          <label class="lobby-field"><span>你的昵称</span><input id="playerName" maxlength="12" placeholder="车手"></label>
+          <div class="lobby-summary" id="roomSummary">蘑菇平原 · 100cc · 3 圈</div>
+          <button class="btn-primary" id="createRoomBtn"><span>创建房间</span></button>
+          <div class="lobby-join">
+            <input id="joinCode" maxlength="4" placeholder="房间号">
+            <button class="btn-ghost" id="joinBtn">加入</button>
+          </div>
+          <p class="lobby-hint" id="browseHint">房间里的赛道 / 引擎 / 圈数由房主设置</p>
+        </div>
+        <div class="browse-right panel">
+          <h3><span class="dot"></span>公开房间
+            <button class="btn-ghost tiny" id="refreshRooms">刷新</button>
+          </h3>
+          <div class="room-list" id="roomList"></div>
+        </div>
+      </section>
+
+      <!-- 房间内 -->
+      <section class="lobby-room hidden" id="lobbyRoom">
+        <div class="room-main panel">
+          <div class="room-top">
+            <div class="room-code">房间号 <b id="roomCode">----</b><button class="copy" id="copyCode">复制</button></div>
+            <div class="room-status" id="roomStatus">等待玩家…</div>
+          </div>
+          <div class="slot-grid" id="slotGrid"></div>
+          <div class="room-actions">
+            <button class="btn-primary" id="readyBtn"><span>准备</span></button>
+            <button class="btn-primary" id="hostStartBtn" style="display:none"><span>开始比赛</span></button>
+            <button class="btn-ghost" id="leaveRoomBtn">离开房间</button>
+          </div>
+        </div>
+        <div class="room-side panel">
+          <h3><span class="dot"></span>比赛设置</h3>
+          <div class="room-settings" id="roomSettings"></div>
+          <h3><span class="dot"></span>聊天</h3>
+          <div class="chat-log" id="chatLog"></div>
+          <div class="chat-input"><input id="chatInput" maxlength="90" placeholder="说点什么…"><button id="chatSend">发送</button></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- 赛道重建遮罩 -->
+  <div id="buildMask" class="build-mask">
+    <div class="build-box">
+      <div class="build-spin"></div>
+      <div class="build-text" id="buildText">正在生成赛道…</div>
+    </div>
+  </div>
+
+  <div id="flash" class="screen-flash"></div>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script src="lib/workbuddy-cloud.js"></script>
+<script src="js/cloud-config.js"></script>
+<script src="js/util.js"></script>
+<script src="js/render.js"></script>
+<script src="js/tracks.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/particles.js"></script>
+<script src="js/rescue.js"></script>
+<script src="js/track.js"></script>
+<script src="js/character.js"></script>
+<script src="js/kart.js"></script>
+<script src="js/items.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/net.js"></script>
+<script src="js/game.js"></script>
+<script src="js/netui.js"></script>
+</body>
+</html>
