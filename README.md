@@ -160,7 +160,7 @@ python3 -m http.server 8899
 | 02 | 暗夜幸存者 · Night Survivors | 生存 / Roguelite | wyc & DeepSeek | — |
 | 04 | 超级卡丁车 8 · Super Kart 8 | 竞速 / 3D / 联机 | 本仓库 | 原创程序化生成 |
 
-`IP, PLEASE` 为原仓库的静态镜像，仅保留运行时所需文件（去掉了 `media/`、`tools/` 与文档），并在页面左上角加了一个返回游戏厅的入口。原始版权与 MIT 许可见 `games/ip-please/LICENSE`。
+`IP, PLEASE` 为原仓库的静态镜像，仅保留运行时所需文件（去掉了 `media/`、`tools/` 与文档），并在页面左上角加了一个返回游戏厅的入口。当前同步到上游 `8a591a73`（2026-11-13，标题页与片尾加了传送门：续作、GitHub、B 站），游戏代码未做任何改动。原始版权与 MIT 许可见 `games/ip-please/LICENSE`。
 
 ## 新增游戏
 
