@@ -7,10 +7,10 @@
 <!-- 账号后端：local = 存本机浏览器；ESP32 发站时会把它改写成 same-origin -->
 <meta name="arcade-api" content="local">
 <title>游戏厅 · 小宇.GAY</title>
-<meta name="description" content="两个纯静态网页游戏：IP, PLEASE（像素剧情）与 暗夜幸存者（生存射击）。打开就能玩，不登录、不下载、不追踪。">
+<meta name="description" content="五个纯静态网页游戏：像素剧情、顶视角生存射击、手绘横版闯关、3D 卡丁车与太空割草。打开就能玩，不登录、不下载、不追踪。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="游戏厅 · 小宇.GAY">
-<meta property="og:description" content="两个纯静态网页游戏，打开就能玩。">
+<meta property="og:description" content="五个纯静态网页游戏，打开就能玩。">
 <meta property="og:url" content="https://xn--29s3l.xn--0iv.gay/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0b0b'/%3E%3Crect x='6' y='6' width='20' height='20' fill='%23e2001a'/%3E%3C/svg%3E">
 <script>
@@ -198,6 +198,13 @@ html[data-style="glitch"] .art-kart{background:linear-gradient(150deg,#141824,#6
   position:absolute;left:9px;bottom:7px;font-size:8.5px;letter-spacing:.3em;
   text-transform:uppercase;color:rgba(255,255,255,.55);font-weight:600;
 }
+.art-void{background:radial-gradient(circle at 72% 28%,rgba(99,232,255,.20),transparent 46%),radial-gradient(circle at 24% 80%,rgba(160,110,255,.18),transparent 52%),linear-gradient(160deg,#071022 0%,#04060e 62%,#0a0518 100%)}
+.art-void::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.8) 1px,transparent 1.6px),radial-gradient(rgba(140,200,255,.55) 1px,transparent 1.6px);background-size:37px 41px,63px 57px;background-position:0 0,17px 23px;opacity:.45}
+.art-void::after{content:"";position:absolute;left:50%;top:50%;width:78px;height:78px;margin:-39px 0 0 -39px;border:1px solid rgba(99,232,255,.55);border-radius:50%;box-shadow:0 0 0 7px rgba(99,232,255,.06),0 0 26px rgba(99,232,255,.22);background:radial-gradient(circle,rgba(99,232,255,.16),transparent 66%)}
+.art-void .ship{position:absolute;left:50%;top:50%;width:0;height:0;transform:translate(-50%,-50%);border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:15px solid #e3fbff;filter:drop-shadow(0 0 7px rgba(99,232,255,.95));z-index:2}
+.art-void .lbl{position:absolute;left:9px;bottom:7px;font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(180,225,255,.6);font-weight:600}
+html[data-style="pixel"] .art-void::after{border-radius:0;box-shadow:none;border-width:3px}
+html[data-style="pixel"] .art-void .ship{border-bottom-color:#ffe14d;filter:none}
 .art-paper{background:linear-gradient(150deg,#FFF8E7 0%,#F4E4C4 55%,#E6D2AB 100%)}
 .art-paper::before{
   content:"";position:absolute;inset:0;
@@ -1338,13 +1345,13 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <h1 data-text="游戏厅">游戏厅</h1>
       <div class="sub">
         <span class="en">Arcade</span>
-        <span class="cn">四个游戏，零安装</span>
+        <span class="cn">五个游戏，零安装</span>
       </div>
     </div>
 
     <div class="hero-card">
       <p class="lede">
-        四个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
+        五个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
       </p>
       <dl class="specs">
         <div><dt>收录</dt><dd>04 款</dd></div>
@@ -1356,7 +1363,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </section>
 
   <div class="bar">
-    <span>目录 <span class="count">01—04</span></span>
+    <span>目录 <span class="count">01—05</span></span>
     <span class="hint" id="bar-hint">点击任意条目开始</span>
   </div>
 
@@ -1498,6 +1505,39 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       </div>
     </a>
 
+
+    <a class="entry" href="games/void-survivors/">
+      <div class="row">
+        <div class="num">05</div>
+
+        <div class="art art-void" aria-hidden="true">
+          <span class="ship"></span>
+          <span class="lbl">Void Survivors</span>
+        </div>
+
+        <div class="body">
+          <span class="title">深空幸存者</span>
+          <span class="title-cn">VOID SURVIVORS</span>
+          <span class="desc">太空割草 Roguelite。无尽波次、11 种武器、3 个 Boss，四个角色各带闪避与大招；星尘和永久强化跨局保留，越死越强。星舰、弹幕、星云全部由 Canvas 实时绘制，单文件打开就玩。</span>
+          <span class="tags">
+            <span>生存</span><span>Roguelite</span><span>弹幕</span><span>键盘 / 触屏</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">时长</span><span class="v">单局 3—10 分钟</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">WASD / 空格闪避</span></div>
+          <div class="kv"><span class="k">成长</span><span class="v">星尘 · 跨局保留</span></div>
+          <div class="go">
+            <span>进入深空</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
   </main>
 
   <div class="y2k-ad only-portal" aria-hidden="true">
@@ -1528,7 +1568,8 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <b>暗夜幸存者</b> 由 wyc &amp; DeepSeek 开发。<br>
       <b>纸片勇者</b> 的角色由一个小朋友手绘剪贴，代码与纸艺包装由 WorkBuddy 完成。<br>
       <b>超级卡丁车 8</b> 的赛道 / 车辆 / 角色 / 音效全部程序化生成，零外部素材。<br>
-      四个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
+      <b>深空幸存者</b> 的星舰 / 弹幕 / 星云同样由 Canvas 实时绘制，单文件零素材。<br>
+      五个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
     </div>
     <div class="sign">
       <span class="big">小宇.GAY</span>
