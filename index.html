@@ -7,10 +7,10 @@
 <!-- 账号后端：local = 存本机浏览器；ESP32 发站时会把它改写成 same-origin -->
 <meta name="arcade-api" content="local">
 <title>游戏厅 · 小宇.GAY</title>
-<meta name="description" content="八个纯静态网页游戏：像素剧情、顶视角生存射击、手绘横版闯关、3D 卡丁车、太空割草、3D 迷宫、哥特生存与复古射击。打开就能玩，不登录、不下载、不追踪。">
+<meta name="description" content="九个纯静态网页游戏：像素剧情、顶视角生存射击、手绘横版闯关、3D 卡丁车、太空割草、3D 迷宫、哥特生存、复古射击与资金审查。打开就能玩，不登录、不下载、不追踪。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="游戏厅 · 小宇.GAY">
-<meta property="og:description" content="八个纯静态网页游戏，打开就能玩。">
+<meta property="og:description" content="九个纯静态网页游戏，打开就能玩。">
 <meta property="og:url" content="https://xn--29s3l.xn--0iv.gay/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0b0b'/%3E%3Crect x='6' y='6' width='20' height='20' fill='%23e2001a'/%3E%3C/svg%3E">
 <script>
@@ -228,6 +228,15 @@ html[data-style="pixel"] .art-maze::after{border-radius:0;box-shadow:none;border
 .art-ember .lbl{position:absolute;left:9px;bottom:7px;font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,190,140,.6);font-weight:600}
 @keyframes ember-drift{from{background-position:0 0,14px 19px}to{background-position:0 -37px,14px -28px}}
 html[data-style="pixel"] .art-ember::after{border-radius:0;box-shadow:none;border-width:3px}
+
+/* 请出示资金证明 · IPO PLEASE：审查印章 + 单据纸纹 */
+.art-ipo{background:radial-gradient(circle at 74% 30%,rgba(226,0,26,.16),transparent 42%),radial-gradient(circle at 26% 74%,rgba(30,90,200,.18),transparent 44%),linear-gradient(150deg,#f2ede1 0%,#e6ddc9 56%,#d4c7ab 100%)}
+.art-ipo::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(60,50,35,.07) 0 1px,transparent 1px 5px),linear-gradient(90deg,rgba(60,50,35,.05) 1px,transparent 1px)}
+.art-ipo .stamp1,.art-ipo .stamp2{position:absolute;display:flex;align-items:center;justify-content:center;border:2px solid;font-weight:700;letter-spacing:.06em;transform:rotate(-13deg);opacity:.8}
+.art-ipo .stamp1{left:12%;top:18%;width:62px;height:34px;color:#c00018;border-color:#c00018;font-size:10px}
+.art-ipo .stamp2{right:12%;bottom:20%;width:58px;height:58px;color:#123a8c;border-color:#123a8c;border-radius:50%;font-size:8px;transform:rotate(11deg)}
+.art-ipo .lbl{position:absolute;left:9px;bottom:6px;font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;color:rgba(60,45,30,.62);font-weight:700}
+html[data-style="pixel"] .art-ipo .stamp2{border-radius:0}
 .art-paper::before{
   content:"";position:absolute;inset:0;
   background-image:radial-gradient(rgba(120,90,55,.13) 1px,transparent 1px);
@@ -1359,7 +1368,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </div>
 
   <div class="y2k-marquee only-portal" aria-hidden="true">
-    <span>★ 欢迎光临 小宇游戏厅 ★ 本站已收录 8 款游戏，全部免费、免注册、点开即玩 ★ 请把本站加入收藏夹 ★ 感谢您的支持 ★</span>
+    <span>★ 欢迎光临 小宇游戏厅 ★ 本站已收录 9 款游戏，全部免费、免注册、点开即玩 ★ 请把本站加入收藏夹 ★ 感谢您的支持 ★</span>
   </div>
 
   <section class="hero">
@@ -1367,16 +1376,16 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <h1 data-text="游戏厅">游戏厅</h1>
       <div class="sub">
         <span class="en">Arcade</span>
-        <span class="cn">八个游戏，零安装</span>
+        <span class="cn">九个游戏，零安装</span>
       </div>
     </div>
 
     <div class="hero-card">
       <p class="lede">
-        八个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
+        九个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
       </p>
       <dl class="specs">
-        <div><dt>收录</dt><dd>08 款</dd></div>
+        <div><dt>收录</dt><dd>09 款</dd></div>
         <div><dt>体积</dt><dd>≈ 6.3 MB</dd></div>
         <div><dt>后端</dt><dd>可选 · 本机隧道</dd></div>
         <div><dt>追踪</dt><dd>无</dd></div>
@@ -1385,7 +1394,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </section>
 
   <div class="bar">
-    <span>目录 <span class="count">01—08</span></span>
+    <span>目录 <span class="count">01—09</span></span>
     <span class="hint" id="bar-hint">点击任意条目开始</span>
   </div>
 
@@ -1654,6 +1663,39 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       </div>
     </a>
 
+    <a class="entry" href="games/ipo-please/">
+      <div class="row">
+        <div class="num">09</div>
+
+        <div class="art art-ipo" aria-hidden="true">
+          <span class="stamp1">APPROVED</span>
+          <span class="stamp2">IPO</span>
+          <span class="lbl">IPO, Please</span>
+        </div>
+
+        <div class="body">
+          <span class="title">请出示资金证明</span>
+          <span class="title-cn">IPO, PLEASE</span>
+          <span class="desc">《IP, PLEASE》续作。安索兹卡上市了，封号即营收。你还是东八区检查站的审查员 Claude：旧规一条不少，新规每天加一条。Papers, Please 画风的像素剧情游戏，中文 / English 双语，免费在浏览器里玩。</span>
+          <span class="tags">
+            <span>剧情</span><span>模拟</span><span>像素</span><span>续作</span><span>中 / EN</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">时长</span><span class="v">≈ 30 分钟</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">拖拽证件</span></div>
+          <div class="kv"><span class="k">原作</span><span class="v">ip-please.github.io</span></div>
+          <div class="go">
+            <span>开始审查</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
   </main>
 
   <div class="y2k-ad only-portal" aria-hidden="true">
@@ -1687,7 +1729,8 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <b>深空幸存者</b> 的星舰 / 弹幕 / 星云同样由 Canvas 实时绘制，单文件零素材。<br>
       <b>迷渊回响</b> 的迷宫 / 材质 / 光影全部程序化生成，完整打包进单个 HTML 文件。<br>
       <b>余烬守望 Emberwatch</b> 为静态像素生存游戏，本地资源离线可玩。<br>
-      八个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
+      <b>IPO, PLEASE</b> 由 ip-please 团队开发，此处为静态镜像。<br>
+      九个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
     </div>
     <div class="sign">
       <span class="big">小宇.GAY</span>
