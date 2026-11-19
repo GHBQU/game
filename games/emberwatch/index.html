@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#131614">
+  <meta name="description" content="进入暮影森林，在 12、20 或 30 分钟的像素远征中抵御怪潮，搭配技能，活到黎明。">
+  <title>余烬守望 · Emberwatch</title>
+  <link rel="icon" href="data:,">
+  <link rel="preload" href="assets/forest.webp" as="image">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="sprites.js"></script>
+  <script defer src="engine.js"></script>
+  <script defer src="field.js"></script>
+  <script defer src="ui.js"></script>
+</head>
+<body>
+  <header class="mast">
+    <div class="wrap mast-inner">
+      <a class="brand" href="#expedition" aria-label="余烬守望 · 远征大厅">
+        <img data-art="brand" alt="" class="brand-icon">
+        <span class="brand-type"><strong>余烬守望</strong><small>EMBERWATCH</small></span>
+      </a>
+      <nav class="nav" aria-label="主导航">
+        <button class="nav-item is-active" data-page="expedition" aria-current="page"><i data-icon="swords"></i>远征大厅</button>
+        <button class="nav-item" data-page="codex"><i data-icon="book"></i>怪物图鉴</button>
+        <button class="nav-item" data-page="records"><i data-icon="trophy"></i>远征记录</button>
+      </nav>
+      <div class="mast-actions"><button class="sound-button" id="sound" title="切换音效" aria-pressed="true"><i data-icon="sound"></i><span>音效开启</span></button></div>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="page" id="page-expedition" aria-labelledby="expedition-title">
+      <div class="page-head">
+        <div><div class="kicker"><b></b> SURVIVAL EXPEDITION</div><div class="title-line"><h1 id="expedition-title">生存远征</h1><span class="status-pill" id="status"><b></b>准备就绪</span></div></div>
+        <div class="duration-wrap"><span class="duration-label"><i data-icon="clock"></i>远征时长</span><div class="durations" role="group" aria-label="选择远征时长">
+          <button data-minutes="12" aria-pressed="false">12 <span>分钟</span></button><button class="selected" data-minutes="20" aria-pressed="true">20 <span>分钟</span></button><button data-minutes="30" aria-pressed="false">30 <span>分钟</span></button>
+        </div></div>
+      </div>
+      <div class="dashboard">
+        <section id="arena-card" class="arena-card" aria-label="暮影森林游戏区域">
+          <div id="arena" class="arena" tabindex="0" aria-label="游戏场地，使用方向键或 WASD 移动，空格冲刺">
+            <canvas id="field" width="960" height="540" aria-label="像素风暮影森林战场"></canvas>
+            <div class="field-shade"></div>
+            <div class="field-corners" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
+            <div class="field-toolbar">
+              <div class="run-readout"><span class="wave-chip"><i data-icon="swords"></i><span>波次</span><strong id="wave">01</strong></span><span class="timer-chip"><i data-icon="clock"></i><strong id="timer">00:00</strong></span></div>
+              <div class="field-actions"><button id="pause" class="field-button" hidden aria-label="暂停远征" title="暂停 (Esc)"><i data-icon="pause"></i></button><button id="fullscreen" class="field-button" title="全屏游戏" aria-label="全屏游戏"><i data-icon="expand"></i></button></div>
+            </div>
+            <div id="trial-hud" class="trial-hud" aria-label="林地试炼" hidden>
+              <div class="trial-heading"><strong><i data-icon="spark"></i><span id="trial-name"></span></strong><time id="trial-time"></time></div>
+              <p id="trial-progress"></p>
+              <div id="trial-meter" class="trial-meter" role="progressbar" aria-label="试炼进度" aria-valuemin="0" aria-valuemax="100"><b></b></div>
+            </div>
+            <div id="boss-hud" class="boss-hud" hidden><span>荆冠守林者</span><div><b></b></div></div>
+            <div id="wave-notice" class="wave-notice" role="status" aria-live="polite"></div>
+            <div id="lobby" class="lobby">
+              <div class="biome-info"><div class="biome-id"><span></span> REGION 01 <b>/</b> DUSKWOOD</div><h2>暮影森林</h2><p id="mission-copy">击退怪潮，挑战林地祭坛，守到黎明。</p></div>
+              <button id="start" class="primary start"><i data-icon="play"></i><span>开始远征</span><kbd>↵</kbd></button>
+            </div>
+            <div id="active-hud" class="active-hud" hidden><span class="dash-readout"><img data-art="dash" alt=""><b id="dash-readout">冲刺就绪</b></span><span id="goal-readout"></span></div>
+            <div class="touch-ui" id="touch-ui" hidden><div class="stick" id="stick"><b></b></div><button id="touch-dash" aria-label="冲刺"><i data-icon="bolt"></i></button></div>
+            <div id="game-layer" class="game-layer" hidden></div>
+          </div>
+          <div class="field-foot"><div class="area-name"><i data-icon="flag"></i><strong>远征目标</strong><span> / </span><span id="area-objective">守至 20:00，击败守林者</span></div><span class="field-mode"><i data-icon="crosshair"></i>自动攻击</span></div>
+        </section>
+        <aside class="sidebar" aria-label="角色面板">
+          <section class="side-panel adventurer">
+            <div class="panel-title"><h2><i data-icon="user"></i>冒险者状态</h2><small>STATUS</small></div>
+            <div class="profile"><div class="portrait"><img data-art="portrait" alt="橙色兜帽的余烬游侠"></div><div><h3>余烬游侠</h3><div class="profile-labels"><span class="level-chip" id="level">LV. 01</span><button id="loadout" class="loadout" title="查看与选择起始刻印"><span>余烬刻印</span><i data-icon="chevron"></i></button></div></div></div>
+            <div class="meter-group">
+              <div class="meter-row"><span><i data-icon="heart"></i>生命</span><strong id="hp-text">100 <em>/ 100</em></strong></div><div class="meter life" id="hp-bar" role="progressbar" aria-label="生命" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><b></b></div>
+              <div class="meter-row xp-label"><span><i data-icon="spark"></i>经验</span><strong id="xp-text">0 <em>/ 8</em></strong></div><div class="meter exp" id="xp-bar" role="progressbar" aria-label="经验"><b></b></div>
+            </div>
+            <div class="counters"><div><span><i data-icon="skull"></i>击败</span><strong id="kills">000</strong></div><div><span><i data-icon="diamond"></i>灵晶</span><strong id="crystals">000</strong></div></div>
+          </section>
+          <section class="side-panel equipment">
+            <div class="panel-title"><h2><i data-icon="bag"></i>携带技能</h2><small id="equip-count">02</small></div>
+            <div id="equipment-list" class="equipment-list"></div>
+          </section>
+        </aside>
+      </div>
+      <section class="controls-panel" aria-label="操作指南">
+        <div class="controls-title"><i data-icon="gamepad"></i><h2>操作指南</h2></div>
+        <div class="key-guide"><span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span class="or">/</span><span class="keys arrows"><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></span><span>移动</span></div>
+        <div class="key-guide"><kbd class="wide-key">SPACE</kbd><span>冲刺</span></div>
+        <div class="key-guide"><kbd class="wide-key">ESC</kbd><span>暂停</span></div>
+        <div class="touch-guide"><i data-icon="move"></i>拖动摇杆移动，轻点闪电冲刺</div>
+        <button class="guide-more" id="guide"><span>完整指南</span><i data-icon="chevron"></i></button>
+      </section>
+      <div class="field-tip"><span class="tip-mark"><i data-icon="lantern"></i> 篝火提示</span><span id="tip-copy">远征约一分钟后，靠近发光祭坛可开启试炼。</span><button id="tip-next" class="tip-next" title="下一条提示" aria-label="下一条提示"><i data-icon="refresh"></i></button></div>
+    </section>
+    <section class="page" id="page-codex" aria-labelledby="codex-title" hidden>
+      <div class="page-head"><div><div class="kicker"><b></b> FIELD BESTIARY</div><h1 id="codex-title">怪物图鉴</h1></div><span class="head-note">暮影森林 <b>/</b> 05 种生物</span></div>
+      <div id="codex-grid" class="codex-grid"></div>
+    </section>
+    <section class="page" id="page-records" aria-labelledby="records-title" hidden>
+      <div class="page-head"><div><div class="kicker"><b></b> EXPEDITION LOG</div><h1 id="records-title">远征记录</h1></div><span class="head-note"><i data-icon="save"></i> 当前设备</span></div>
+      <div id="records-content"></div>
+    </section>
+  </main>
+  <footer class="wrap footer"><span><b class="footer-flame"></b> EMBERWATCH</span><span id="save-label"><i data-icon="save"></i> 进度自动保存在此设备</span></footer>
+  <div id="guide-dialog" class="global-layer" hidden></div>
+</body>
+</html>
