@@ -7,10 +7,10 @@
 <!-- 账号后端：local = 存本机浏览器；ESP32 发站时会把它改写成 same-origin -->
 <meta name="arcade-api" content="local">
 <title>游戏厅 · 小宇.GAY</title>
-<meta name="description" content="五个纯静态网页游戏：像素剧情、顶视角生存射击、手绘横版闯关、3D 卡丁车与太空割草。打开就能玩，不登录、不下载、不追踪。">
+<meta name="description" content="八个纯静态网页游戏：像素剧情、顶视角生存射击、手绘横版闯关、3D 卡丁车、太空割草、3D 迷宫、哥特生存与复古射击。打开就能玩，不登录、不下载、不追踪。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="游戏厅 · 小宇.GAY">
-<meta property="og:description" content="五个纯静态网页游戏，打开就能玩。">
+<meta property="og:description" content="八个纯静态网页游戏，打开就能玩。">
 <meta property="og:url" content="https://xn--29s3l.xn--0iv.gay/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0b0b'/%3E%3Crect x='6' y='6' width='20' height='20' fill='%23e2001a'/%3E%3C/svg%3E">
 <script>
@@ -206,6 +206,28 @@ html[data-style="glitch"] .art-kart{background:linear-gradient(150deg,#141824,#6
 html[data-style="pixel"] .art-void::after{border-radius:0;box-shadow:none;border-width:3px}
 html[data-style="pixel"] .art-void .ship{border-bottom-color:#ffe14d;filter:none}
 .art-paper{background:linear-gradient(150deg,#FFF8E7 0%,#F4E4C4 55%,#E6D2AB 100%)}
+
+/* 迷渊回响 · 3D 迷宫：深蓝遗迹 + 符文光环 */
+.art-maze{background:radial-gradient(circle at 50% 62%,rgba(110,150,255,.30),transparent 48%),radial-gradient(circle at 22% 24%,rgba(150,110,255,.20),transparent 46%),linear-gradient(165deg,#070b1c 0%,#0d1330 58%,#06081a 100%)}
+.art-maze::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(140,170,255,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(140,170,255,.10) 1px,transparent 1px);background-size:23px 23px;transform:perspective(150px) rotateX(52deg) scale(1.7);transform-origin:center 78%;opacity:.65}
+.art-maze::after{content:"";position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border:1px solid rgba(150,180,255,.55);border-radius:50%;box-shadow:0 0 0 8px rgba(120,150,255,.05),0 0 28px rgba(130,160,255,.35),inset 0 0 22px rgba(130,160,255,.18)}
+.art-maze .rune{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;background:#bcd0ff;transform:rotate(45deg);box-shadow:0 0 14px 4px rgba(150,180,255,.8);z-index:2}
+.art-maze .lbl{position:absolute;left:9px;bottom:7px;font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(180,200,255,.6);font-weight:600}
+html[data-style="pixel"] .art-maze::after{border-radius:0;box-shadow:none;border-width:3px}
+
+/* 暗夜幸存者·经典版：复古绿荧光 + 扫描线 */
+.art-classic{background:#08120c}
+.art-classic::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(126,224,192,.14) 0 1px,transparent 1px 4px),repeating-radial-gradient(circle at 50% 50%,transparent 0 13px,rgba(126,224,192,.13) 13px 14px)}
+.art-classic::after{content:"";position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;background:#7ee0c0;border-radius:50%;box-shadow:0 0 0 4px rgba(126,224,192,.18),0 0 20px 6px rgba(126,224,192,.55)}
+.art-classic .lbl{position:absolute;left:9px;bottom:7px;font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(126,224,192,.6);font-weight:600}
+
+/* 余烬守望 · Emberwatch：暮影森林 + 余烬火光 */
+.art-ember{background:radial-gradient(circle at 50% 66%,rgba(255,140,60,.28),transparent 50%),radial-gradient(circle at 26% 22%,rgba(120,180,90,.16),transparent 44%),linear-gradient(165deg,#1a1109 0%,#26170d 56%,#0d0a06 100%)}
+.art-ember::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,180,90,.9) 1px,transparent 1.7px),radial-gradient(rgba(255,120,50,.7) 1px,transparent 1.7px);background-size:31px 37px,53px 47px;background-position:0 0,14px 19px;opacity:.5;animation:ember-drift 7s linear infinite}
+.art-ember::after{content:"";position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;border:1px solid rgba(255,150,70,.55);border-radius:50%;box-shadow:0 0 0 8px rgba(255,120,50,.06),0 0 30px rgba(255,120,50,.3),inset 0 0 24px rgba(255,140,60,.22)}
+.art-ember .lbl{position:absolute;left:9px;bottom:7px;font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,190,140,.6);font-weight:600}
+@keyframes ember-drift{from{background-position:0 0,14px 19px}to{background-position:0 -37px,14px -28px}}
+html[data-style="pixel"] .art-ember::after{border-radius:0;box-shadow:none;border-width:3px}
 .art-paper::before{
   content:"";position:absolute;inset:0;
   background-image:radial-gradient(rgba(120,90,55,.13) 1px,transparent 1px);
@@ -1337,7 +1359,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </div>
 
   <div class="y2k-marquee only-portal" aria-hidden="true">
-    <span>★ 欢迎光临 小宇游戏厅 ★ 本站已收录 3 款游戏，全部免费、免注册、点开即玩 ★ 请把本站加入收藏夹 ★ 感谢您的支持 ★</span>
+    <span>★ 欢迎光临 小宇游戏厅 ★ 本站已收录 8 款游戏，全部免费、免注册、点开即玩 ★ 请把本站加入收藏夹 ★ 感谢您的支持 ★</span>
   </div>
 
   <section class="hero">
@@ -1345,17 +1367,17 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <h1 data-text="游戏厅">游戏厅</h1>
       <div class="sub">
         <span class="en">Arcade</span>
-        <span class="cn">五个游戏，零安装</span>
+        <span class="cn">八个游戏，零安装</span>
       </div>
     </div>
 
     <div class="hero-card">
       <p class="lede">
-        五个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
+        八个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
       </p>
       <dl class="specs">
-        <div><dt>收录</dt><dd>04 款</dd></div>
-        <div><dt>体积</dt><dd>4.5 MB</dd></div>
+        <div><dt>收录</dt><dd>08 款</dd></div>
+        <div><dt>体积</dt><dd>≈ 6.3 MB</dd></div>
         <div><dt>后端</dt><dd>可选 · 本机隧道</dd></div>
         <div><dt>追踪</dt><dd>无</dd></div>
       </dl>
@@ -1363,7 +1385,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </section>
 
   <div class="bar">
-    <span>目录 <span class="count">01—05</span></span>
+    <span>目录 <span class="count">01—08</span></span>
     <span class="hint" id="bar-hint">点击任意条目开始</span>
   </div>
 
@@ -1538,6 +1560,100 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       </div>
     </a>
 
+    <a class="entry" href="games/maze-echo/">
+      <div class="row">
+        <div class="num">06</div>
+
+        <div class="art art-maze" aria-hidden="true">
+          <span class="rune"></span>
+          <span class="lbl">Maze Echo</span>
+        </div>
+
+        <div class="body">
+          <span class="title">迷渊回响</span>
+          <span class="title-cn">MAZE ECHO</span>
+          <span class="desc">第三人称 3D 迷宫冒险。三个递进关卡：寻找符文、破解机关、击破封印迎战首领。移动墙、旋转刀阵、巡逻与追踪敌人、开关暗门、双向传送、地刺落石毒雾轮番上阵，配合脉冲攻击与闪避。程序化材质与动态光影，全部打包进单个 HTML 文件。</span>
+          <span class="tags">
+            <span>3D 迷宫</span><span>解谜 / 战斗</span><span>三关递进</span><span>键盘 / 鼠标</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">时长</span><span class="v">≈ 20 分钟</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">WASD / 空格</span></div>
+          <div class="kv"><span class="k">画面</span><span class="v">WebGL 3D</span></div>
+          <div class="go">
+            <span>踏入迷渊</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <a class="entry" href="games/night-survivors-classic/">
+      <div class="row">
+        <div class="num">07</div>
+
+        <div class="art art-classic" aria-hidden="true">
+          <span class="lbl">Night Survivors · Classic</span>
+        </div>
+
+        <div class="body">
+          <span class="title">暗夜幸存者 · 初代</span>
+          <span class="title-cn">NIGHT SURVIVORS CLASSIC</span>
+          <span class="desc">暗夜幸存者的初代版本，单文件轻量存档。顶视角生存射击，一命通关，四面涌来的敌人，每次升级三选一。这一版保留了最初的界面与手感，体积更小、加载更快；与在架的 v2 版并列收录，进度各自独立。</span>
+          <span class="tags">
+            <span>生存</span><span>Roguelite</span><span>初代版本</span><span>键盘 / 触屏</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">节奏</span><span class="v">单局 3—10 分钟</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">WASD / 摇杆</span></div>
+          <div class="kv"><span class="k">体积</span><span class="v">83 KB 单文件</span></div>
+          <div class="go">
+            <span>进入初代</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <a class="entry" href="games/emberwatch/">
+      <div class="row">
+        <div class="num">08</div>
+
+        <div class="art art-ember" aria-hidden="true">
+          <span class="lbl">Emberwatch</span>
+        </div>
+
+        <div class="body">
+          <span class="title">余烬守望</span>
+          <span class="title-cn">EMBERWATCH</span>
+          <span class="desc">进入暮影森林，在 12、20 或 30 分钟的像素远征中抵御怪潮。拖动摇杆移动、轻点闪电冲刺，靠近发光祭坛开启林地试炼，搭配技能守到黎明。进度自动保存在本机。</span>
+          <span class="tags">
+            <span>生存</span><span>像素</span><span>哥特森林</span><span>键盘 / 触屏</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">时长</span><span class="v">12 / 20 / 30 分钟</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">摇杆 / 闪电冲刺</span></div>
+          <div class="kv"><span class="k">进度</span><span class="v">自动保存在本机</span></div>
+          <div class="go">
+            <span>开始远征</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
   </main>
 
   <div class="y2k-ad only-portal" aria-hidden="true">
@@ -1569,7 +1685,9 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <b>纸片勇者</b> 的角色由一个小朋友手绘剪贴，代码与纸艺包装由 WorkBuddy 完成。<br>
       <b>超级卡丁车 8</b> 的赛道 / 车辆 / 角色 / 音效全部程序化生成，零外部素材。<br>
       <b>深空幸存者</b> 的星舰 / 弹幕 / 星云同样由 Canvas 实时绘制，单文件零素材。<br>
-      五个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
+      <b>迷渊回响</b> 的迷宫 / 材质 / 光影全部程序化生成，完整打包进单个 HTML 文件。<br>
+      <b>余烬守望 Emberwatch</b> 为静态像素生存游戏，本地资源离线可玩。<br>
+      八个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
     </div>
     <div class="sign">
       <span class="big">小宇.GAY</span>
