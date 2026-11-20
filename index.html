@@ -7,10 +7,10 @@
 <!-- 账号后端：local = 存本机浏览器；ESP32 发站时会把它改写成 same-origin -->
 <meta name="arcade-api" content="local">
 <title>游戏厅 · 小宇.GAY</title>
-<meta name="description" content="十个纯静态网页游戏：像素剧情、顶视角生存射击、手绘横版闯关、3D 卡丁车、太空割草、3D 迷宫、哥特生存、复古射击、资金审查与像素沙盒。打开就能玩，不登录、不下载、不追踪。">
+<meta name="description" content="十一个纯静态网页游戏：像素剧情、顶视角生存射击、手绘横版闯关、3D 卡丁车、太空割草、3D 迷宫、哥特生存、复古射击、资金审查、像素沙盒与农场生活。打开就能玩，不登录、不下载、不追踪。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="游戏厅 · 小宇.GAY">
-<meta property="og:description" content="十个纯静态网页游戏，打开就能玩。">
+<meta property="og:description" content="十一个纯静态网页游戏，打开就能玩。">
 <meta property="og:url" content="https://xn--29s3l.xn--0iv.gay/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0b0b'/%3E%3Crect x='6' y='6' width='20' height='20' fill='%23e2001a'/%3E%3C/svg%3E">
 <script>
@@ -247,6 +247,17 @@ html[data-style="pixel"] .art-ipo .stamp2{border-radius:0}
 .art-star .sprout{position:absolute;right:16%;bottom:20%;width:8px;height:14px;background:#2f7a34;border-radius:50% 50% 0 0;box-shadow:-14px 4px 0 -1px #2f7a34,14px 4px 0 -1px #2f7a34}
 .art-star .lbl{position:absolute;left:9px;bottom:6px;font-size:8.5px;letter-spacing:.26em;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.5)}
 html[data-style="pixel"] .art-star .sun{border-radius:0}
+
+/* 星野农庄 · 像素农场生活：垄沟田地 + 谷仓 */
+.art-farm{background:linear-gradient(180deg,#f3c98a 0%,#e8b06a 34%,#8fbf5a 35%,#5f9439 100%)}
+.art-farm::before{content:"";position:absolute;left:0;right:0;bottom:0;height:65%;background:repeating-linear-gradient(90deg,rgba(70,50,25,.20) 0 2px,transparent 2px 14px),repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 9px)}
+.art-farm .barn{position:absolute;left:18%;bottom:30%;width:40px;height:27px;background:#b34a3a;border:2px solid #6f2b21;box-shadow:inset 0 0 0 3px #c85e4b}
+.art-farm .barn::before{content:"";position:absolute;left:-4px;top:-14px;width:0;height:0;border-left:24px solid transparent;border-right:24px solid transparent;border-bottom:15px solid #7e3227}
+.art-farm .barn::after{content:"";position:absolute;left:14px;bottom:0;width:10px;height:15px;background:#6f2b21}
+.art-farm .crop{position:absolute;right:18%;bottom:24%;width:6px;height:18px;background:#e8c33e;box-shadow:-13px 3px 0 -1px #e8c33e,13px 3px 0 -1px #e8c33e,0 8px 0 -2px #7fa832}
+.art-farm .sun{position:absolute;right:24%;top:12%;width:22px;height:22px;border-radius:50%;background:#fff1c0;box-shadow:0 0 16px 5px rgba(255,235,170,.6)}
+.art-farm .lbl{position:absolute;left:9px;bottom:6px;font-size:8.5px;letter-spacing:.26em;text-transform:uppercase;color:rgba(255,255,255,.9);font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.55)}
+html[data-style="pixel"] .art-farm .sun{border-radius:0}
 .art-paper::before{
   content:"";position:absolute;inset:0;
   background-image:radial-gradient(rgba(120,90,55,.13) 1px,transparent 1px);
@@ -1378,7 +1389,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </div>
 
   <div class="y2k-marquee only-portal" aria-hidden="true">
-    <span>★ 欢迎光临 小宇游戏厅 ★ 本站已收录 10 款游戏，全部免费、免注册、点开即玩 ★ 请把本站加入收藏夹 ★ 感谢您的支持 ★</span>
+    <span>★ 欢迎光临 小宇游戏厅 ★ 本站已收录 11 款游戏，全部免费、免注册、点开即玩 ★ 请把本站加入收藏夹 ★ 感谢您的支持 ★</span>
   </div>
 
   <section class="hero">
@@ -1386,16 +1397,16 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <h1 data-text="游戏厅">游戏厅</h1>
       <div class="sub">
         <span class="en">Arcade</span>
-        <span class="cn">十个游戏，零安装</span>
+        <span class="cn">十一个游戏，零安装</span>
       </div>
     </div>
 
     <div class="hero-card">
       <p class="lede">
-        十个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
+        十一个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
       </p>
       <dl class="specs">
-        <div><dt>收录</dt><dd>10 款</dd></div>
+        <div><dt>收录</dt><dd>11 款</dd></div>
         <div><dt>体积</dt><dd>≈ 6.3 MB</dd></div>
         <div><dt>后端</dt><dd>可选 · 本机隧道</dd></div>
         <div><dt>追踪</dt><dd>无</dd></div>
@@ -1404,7 +1415,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </section>
 
   <div class="bar">
-    <span>目录 <span class="count">01—10</span></span>
+    <span>目录 <span class="count">01—11</span></span>
     <span class="hint" id="bar-hint">点击任意条目开始</span>
   </div>
 
@@ -1740,6 +1751,40 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       </div>
     </a>
 
+    <a class="entry" href="games/starfield-farm/">
+      <div class="row">
+        <div class="num">11</div>
+
+        <div class="art art-farm" aria-hidden="true">
+          <span class="sun"></span>
+          <span class="barn"></span>
+          <span class="crop"></span>
+          <span class="lbl">Starfield Farm</span>
+        </div>
+
+        <div class="body">
+          <span class="title">星野农庄</span>
+          <span class="title-cn">STARFIELD FARM</span>
+          <span class="desc">祖父留下的是一片被野草淹没的旧农场，和一张写着「把星星种回土里」的字条。种地、打怪、成家、远行——没有人替你决定今天的活法。全部内容打包进单个 HTML 文件，打开就能玩。</span>
+          <span class="tags">
+            <span>农场</span><span>生活模拟</span><span>像素</span><span>单文件</span><span>键盘</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">玩法</span><span class="v">种田 / 打怪 / 成家</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">WASD / 键鼠</span></div>
+          <div class="kv"><span class="k">体积</span><span class="v">272 KB 单文件</span></div>
+          <div class="go">
+            <span>经营农庄</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
   </main>
 
   <div class="y2k-ad only-portal" aria-hidden="true">
@@ -1775,7 +1820,8 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <b>余烬守望 Emberwatch</b> 为静态像素生存游戏，本地资源离线可玩。<br>
       <b>IPO, PLEASE</b> 由 ip-please 团队开发，此处为静态镜像。<br>
       <b>星野物语</b> 的美术与音效全部由代码程序化生成，零外部素材。<br>
-      十个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
+      <b>星野农庄</b> 为单文件像素农场生活游戏，无需安装、打开就玩。<br>
+      十一个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
     </div>
     <div class="sign">
       <span class="big">小宇.GAY</span>
