@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星野物语 · 像素沙盒生活RPG</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <div id="titleScreen" class="screen active">
+    <canvas id="titleCanvas" width="800" height="600"></canvas>
+    <div class="title-overlay">
+      <h1 class="game-title">星 野 物 语</h1>
+      <p class="subtitle">Starfield Story — 种田 · 打怪 · 养家 · 探索</p>
+      <div class="menu">
+        <button id="btnContinue" class="pixel-btn">继续游戏</button>
+        <button id="btnNew" class="pixel-btn">新的开始</button>
+        <button id="btnHelp" class="pixel-btn">操作说明</button>
+      </div>
+      <p class="hint">一个完全自由的像素沙盒世界 —— 你的生活由你决定</p>
+    </div>
+  </div>
+
+  <div id="gameScreen" class="screen">
+    <canvas id="gameCanvas"></canvas>
+    <div id="hud">
+      <div id="topbar">
+        <div id="clock" class="hud-box">第 1 年 春 1 日 06:00</div>
+        <div id="weather" class="hud-box">☀ 晴</div>
+        <div id="location" class="hud-box">星野村</div>
+      </div>
+      <div id="leftStats">
+        <div class="stat-row"><span class="stat-icon">❤</span><div class="bar-bg"><div id="hpBar" class="bar-fill hp"></div></div><span id="hpText" class="stat-num">100/100</span></div>
+        <div class="stat-row"><span class="stat-icon">✦</span><div class="bar-bg"><div id="staminaBar" class="bar-fill stamina"></div></div><span id="staminaText" class="stat-num">100/100</span></div>
+        <div class="stat-row"><span class="stat-icon">◇</span><div class="bar-bg"><div id="manaBar" class="bar-fill mana"></div></div><span id="manaText" class="stat-num">50/50</span></div>
+      </div>
+      <div id="moneyBox" class="hud-box">💰 <span id="money">500</span> G</div>
+      <div id="toolbar"></div>
+      <div id="skillBox" class="hud-box">
+        <div>🌾 农耕 <span id="lvFarming">1</span></div>
+        <div>⚔ 战斗 <span id="lvCombat">1</span></div>
+        <div>⛏ 采矿 <span id="lvMining">1</span></div>
+        <div>🎣 钓鱼 <span id="lvFishing">1</span></div>
+        <div>🌿 采集 <span id="lvForaging">1</span></div>
+      </div>
+      <div id="questTracker" class="hud-box"></div>
+      <div id="toastArea"></div>
+      <div id="dialogueBox" class="hidden">
+        <div id="dialogueName">村民</div>
+        <div id="dialogueText"></div>
+        <div class="dialogue-hint">按 空格 / E 继续</div>
+      </div>
+    </div>
+    <div id="menuPanel" class="panel hidden">
+      <div class="panel-tabs">
+        <button data-tab="inventory" class="tab active">背包</button>
+        <button data-tab="craft" class="tab">制作</button>
+        <button data-tab="skills" class="tab">技能</button>
+        <button data-tab="social" class="tab">人际</button>
+        <button data-tab="quests" class="tab">任务</button>
+        <button data-tab="options" class="tab">设置</button>
+      </div>
+      <div id="panelContent"></div>
+      <div class="panel-footer">按 ESC / Tab 关闭</div>
+    </div>
+  </div>
+
+  <div id="helpScreen" class="screen">
+    <div class="help-content">
+      <h2>操作说明</h2>
+      <div class="help-grid">
+        <div><b>WASD / 方向键</b><span>移动</span></div>
+        <div><b>J / 鼠标左键</b><span>使用工具 / 攻击</span></div>
+        <div><b>K / 鼠标右键</b><span>次要动作 / 交互</span></div>
+        <div><b>空格</b><span>跳跃 / 确认</span></div>
+        <div><b>1-9 / 滚轮</b><span>切换物品栏</span></div>
+        <div><b>I / Tab / E</b><span>打开背包 / 交互</span></div>
+        <div><b>C</b><span>制作菜单</span></div>
+        <div><b>Q</b><span>任务日志</span></div>
+        <div><b>F</b><span>放置 / 收获</span></div>
+        <div><b>M</b><span>地图</span></div>
+        <div><b>P</b><span>暂停 / 存档</span></div>
+        <div><b>Shift</b><span>奔跑</span></div>
+      </div>
+      <h3>玩法提示</h3>
+      <ul>
+        <li>先用锄头耕地，再播种、浇水，作物会随季节成长，收获后卖钱。</li>
+        <li>夜晚外出会遇到怪物，带上武器和药水去矿洞深处挖矿吧。</li>
+        <li>和村民对话增进感情，送礼、帮忙，甚至可以组建自己的家庭。</li>
+        <li>探索四个季节的区域、隐藏宝箱和地下矿洞，收集稀有材料。</li>
+        <li>升级技能解锁更强的工具和配方，游戏会随时自动保存。</li>
+      </ul>
+      <button id="btnHelpClose" class="pixel-btn">返回</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/utils.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/items.js"></script>
+<script src="js/world.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/systems.js"></script>
+<script src="js/render.js"></script>
+<script src="js/input.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
