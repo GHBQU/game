@@ -7,10 +7,10 @@
 <!-- 账号后端：local = 存本机浏览器；ESP32 发站时会把它改写成 same-origin -->
 <meta name="arcade-api" content="local">
 <title>游戏厅 · 小宇.GAY</title>
-<meta name="description" content="九个纯静态网页游戏：像素剧情、顶视角生存射击、手绘横版闯关、3D 卡丁车、太空割草、3D 迷宫、哥特生存、复古射击与资金审查。打开就能玩，不登录、不下载、不追踪。">
+<meta name="description" content="十个纯静态网页游戏：像素剧情、顶视角生存射击、手绘横版闯关、3D 卡丁车、太空割草、3D 迷宫、哥特生存、复古射击、资金审查与像素沙盒。打开就能玩，不登录、不下载、不追踪。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="游戏厅 · 小宇.GAY">
-<meta property="og:description" content="九个纯静态网页游戏，打开就能玩。">
+<meta property="og:description" content="十个纯静态网页游戏，打开就能玩。">
 <meta property="og:url" content="https://xn--29s3l.xn--0iv.gay/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0b0b'/%3E%3Crect x='6' y='6' width='20' height='20' fill='%23e2001a'/%3E%3C/svg%3E">
 <script>
@@ -237,6 +237,16 @@ html[data-style="pixel"] .art-ember::after{border-radius:0;box-shadow:none;borde
 .art-ipo .stamp2{right:12%;bottom:20%;width:58px;height:58px;color:#123a8c;border-color:#123a8c;border-radius:50%;font-size:8px;transform:rotate(11deg)}
 .art-ipo .lbl{position:absolute;left:9px;bottom:6px;font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;color:rgba(60,45,30,.62);font-weight:700}
 html[data-style="pixel"] .art-ipo .stamp2{border-radius:0}
+
+/* 星野物语 · 像素沙盒生活：田园地块 + 落日 */
+.art-star{background:radial-gradient(circle at 74% 26%,rgba(255,206,120,.42),transparent 40%),linear-gradient(180deg,#8ec5e8 0%,#cfe6d0 46%,#6fa64f 47%,#4d8038 100%)}
+.art-star::before{content:"";position:absolute;left:0;right:0;bottom:0;height:54%;background:repeating-linear-gradient(90deg,rgba(30,70,25,.16) 0 1px,transparent 1px 13px),repeating-linear-gradient(0deg,rgba(30,70,25,.16) 0 1px,transparent 1px 13px)}
+.art-star .sun{position:absolute;right:22%;top:16%;width:26px;height:26px;border-radius:50%;background:#ffd98a;box-shadow:0 0 18px 6px rgba(255,210,130,.55)}
+.art-star .house{position:absolute;left:24%;bottom:26%;width:34px;height:24px;background:#8b5a3c;border:2px solid #5d3a26;box-shadow:inset 0 0 0 3px #a9714d}
+.art-star .house::before{content:"";position:absolute;left:-5px;top:-13px;width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:14px solid #b4463a}
+.art-star .sprout{position:absolute;right:16%;bottom:20%;width:8px;height:14px;background:#2f7a34;border-radius:50% 50% 0 0;box-shadow:-14px 4px 0 -1px #2f7a34,14px 4px 0 -1px #2f7a34}
+.art-star .lbl{position:absolute;left:9px;bottom:6px;font-size:8.5px;letter-spacing:.26em;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+html[data-style="pixel"] .art-star .sun{border-radius:0}
 .art-paper::before{
   content:"";position:absolute;inset:0;
   background-image:radial-gradient(rgba(120,90,55,.13) 1px,transparent 1px);
@@ -1368,7 +1378,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </div>
 
   <div class="y2k-marquee only-portal" aria-hidden="true">
-    <span>★ 欢迎光临 小宇游戏厅 ★ 本站已收录 9 款游戏，全部免费、免注册、点开即玩 ★ 请把本站加入收藏夹 ★ 感谢您的支持 ★</span>
+    <span>★ 欢迎光临 小宇游戏厅 ★ 本站已收录 10 款游戏，全部免费、免注册、点开即玩 ★ 请把本站加入收藏夹 ★ 感谢您的支持 ★</span>
   </div>
 
   <section class="hero">
@@ -1376,16 +1386,16 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <h1 data-text="游戏厅">游戏厅</h1>
       <div class="sub">
         <span class="en">Arcade</span>
-        <span class="cn">九个游戏，零安装</span>
+        <span class="cn">十个游戏，零安装</span>
       </div>
     </div>
 
     <div class="hero-card">
       <p class="lede">
-        九个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
+        十个纯静态网页游戏，<b>打开就能玩</b>。不下载、不追踪，进度存在你自己的浏览器里。桌面端用键鼠，手机端用手指。
       </p>
       <dl class="specs">
-        <div><dt>收录</dt><dd>09 款</dd></div>
+        <div><dt>收录</dt><dd>10 款</dd></div>
         <div><dt>体积</dt><dd>≈ 6.3 MB</dd></div>
         <div><dt>后端</dt><dd>可选 · 本机隧道</dd></div>
         <div><dt>追踪</dt><dd>无</dd></div>
@@ -1394,7 +1404,7 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
   </section>
 
   <div class="bar">
-    <span>目录 <span class="count">01—09</span></span>
+    <span>目录 <span class="count">01—10</span></span>
     <span class="hint" id="bar-hint">点击任意条目开始</span>
   </div>
 
@@ -1696,6 +1706,40 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       </div>
     </a>
 
+    <a class="entry" href="games/starfield-story/">
+      <div class="row">
+        <div class="num">10</div>
+
+        <div class="art art-star" aria-hidden="true">
+          <span class="sun"></span>
+          <span class="house"></span>
+          <span class="sprout"></span>
+          <span class="lbl">Starfield Story</span>
+        </div>
+
+        <div class="body">
+          <span class="title">星野物语</span>
+          <span class="title-cn">STARFIELD STORY</span>
+          <span class="desc">完全自由的像素沙盒生活 RPG：种田、打怪、养家、探索，没有任何线性强制流程。所有美术与音乐音效都由代码程序化生成，零外部素材。针对预览窗口做了专门适配，打开就能玩。</span>
+          <span class="tags">
+            <span>沙盒</span><span>生活 RPG</span><span>像素</span><span>程序化生成</span><span>键盘</span>
+          </span>
+        </div>
+
+        <div class="side">
+          <div class="kv"><span class="k">玩法</span><span class="v">自由沙盒 · 无线性</span></div>
+          <div class="kv"><span class="k">操作</span><span class="v">WASD / 键鼠</span></div>
+          <div class="kv"><span class="k">素材</span><span class="v">全程序化生成</span></div>
+          <div class="go">
+            <span>开始生活</span>
+            <svg width="15" height="10" viewBox="0 0 15 10" fill="none" aria-hidden="true">
+              <path d="M0 5h13M9 1l4 4-4 4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
   </main>
 
   <div class="y2k-ad only-portal" aria-hidden="true">
@@ -1730,7 +1774,8 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       <b>迷渊回响</b> 的迷宫 / 材质 / 光影全部程序化生成，完整打包进单个 HTML 文件。<br>
       <b>余烬守望 Emberwatch</b> 为静态像素生存游戏，本地资源离线可玩。<br>
       <b>IPO, PLEASE</b> 由 ip-please 团队开发，此处为静态镜像。<br>
-      九个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
+      <b>星野物语</b> 的美术与音效全部由代码程序化生成，零外部素材。<br>
+      十个游戏都不加载外部资源，断网也能玩；联机服务不可用时各自自动退回单机。
     </div>
     <div class="sign">
       <span class="big">小宇.GAY</span>
