@@ -54,10 +54,17 @@
      ESP32 的静态服务在返回 index.html 时会把这里的值改写成 same-origin。 */
   var API_MODE = (function () {
     var m = document.querySelector('meta[name="arcade-api"]');
-    var v = m ? String(m.getAttribute('content') || '').trim() : '';
-    /* 游戏页没有被服务端改写 meta，但和主页同源，复用主页解析出的结果 */
+    var meta = m ? String(m.getAttribute('content') || '').trim() : '';
+    var v = meta;
     if (!v) {
       try { v = localStorage.getItem('arcade.api-mode') || ''; } catch (e) {}
+    }
+    /* 老版本在所有页面上都往这个键写过 'local'。浏览器里要是还留着令牌，
+       说明账号明明在服务器上，不能因为一个过期的 'local' 就把账号系统切成离线。
+       meta 显式写了 local（真的想离线跑）时不动它。 */
+    if (!meta && v === 'local') {
+      var old = read(K_SES, null);
+      if (old && old.token) v = DEFAULT_API;
     }
     v = v || DEFAULT_API;
     try { localStorage.setItem('arcade.api-mode', v); } catch (e) {}

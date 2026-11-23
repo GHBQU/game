@@ -73,11 +73,26 @@
     var s = read(K_SES, null);
     return s && s.token ? s : null;
   }
-  function apiBase() {
+
+  /* 走哪台账号服务器。
+     有些游戏页根本不加载 arcade.js（星野农庄就是），只能自己判断：
+       · 页面上有 window.Arcade → 直接用它解析好的结果
+       · 否则读 localStorage 里的标记
+       · 标记是 'local' 但浏览器里有令牌 → 说明这是老版本留下的过期值，
+         账号明明在服务器上，照常同步（顺手把这个键修正过来，下次就不用再猜） */
+  function apiMode() {
+    if (window.Arcade && window.Arcade.apiMode) return window.Arcade.apiMode;
     var v = '';
     try { v = localStorage.getItem('arcade.api-mode') || ''; } catch (e) {}
-    if (!v && window.Arcade && window.Arcade.apiMode) v = window.Arcade.apiMode;
-    v = v || DEFAULT_API;
+    if (!v) v = DEFAULT_API;
+    if (v === 'local' && session()) {
+      v = DEFAULT_API;
+      try { localStorage.setItem('arcade.api-mode', v); } catch (e) {}
+    }
+    return v;
+  }
+  function apiBase() {
+    var v = apiMode();
     if (v === 'local' || v === 'same-origin') return '';
     return v.replace(/\/+$/, '');
   }
@@ -85,11 +100,6 @@
     var base = apiBase();
     if (base) return base + '/api' + path;
     return '/api' + path;
-  }
-  function apiMode() {
-    var v = '';
-    try { v = localStorage.getItem('arcade.api-mode') || ''; } catch (e) {}
-    return v || (window.Arcade && window.Arcade.apiMode) || DEFAULT_API;
   }
 
   function inScope(key) {
