@@ -195,12 +195,31 @@
     } catch (e) {}
   }
 
+  /* 没登录时提醒一次：这一局的进度不会跟到别的设备 */
+  function hintAnon() {
+    var flag = 'arcadeprog.hint.' + GAME;
+    try {
+      if (sessionStorage.getItem(flag)) return;
+      sessionStorage.setItem(flag, '1');
+    } catch (e) {}
+    toast('未登录：进度只存在这台设备，回游戏厅登录后才会同步到云端');
+  }
+
   /* ---------------- 应用服务器数据到本机 ---------------- */
+  var K_BACKUP = 'arcadeprog.backup.' + GAME;
+
+  /* 覆盖之前先把本机这一份留底：换账号、误登录都不会把本地进度直接抹掉 */
+  function saveBackup(keys, why) {
+    if (!keys || isEmpty(keys)) return false;
+    return writeLocal(K_BACKUP, { at: Date.now(), why: why || 'remote', keys: keys });
+  }
+
   function applyRemote(keys) {
+    var want = keys || {};
+    var current = scopeKeys();
+    if (!isEmpty(current) && !same(current, want)) saveBackup(current, 'remote');
     S.suppress = true;
     try {
-      var want = keys || {};
-      var current = scopeKeys();
       Object.keys(current).forEach(function (k) {
         if (!(k in want)) { try { localStorage.removeItem(k); } catch (e) {} }
       });
@@ -245,7 +264,7 @@
 
   function pull(quiet) {
     var ses = session();
-    if (!ses) { emit('anon'); return Promise.resolve(null); }
+    if (!ses) { emit('anon'); hintAnon(); return Promise.resolve(null); }
     if (apiMode() === 'local') { emit('anon'); return Promise.resolve(null); }
     return request('/progress?token=' + encodeURIComponent(ses.token) + '&game=' + encodeURIComponent(GAME))
       .then(function (r) {
@@ -438,6 +457,17 @@
     push: function () { return pushNow(true); },
     saveNow: function () { return pushNow(true); },
     snapshot: scopeKeys,
+    backup: function () { return read(K_BACKUP, null); },
+    /* 把上一次被云端覆盖前的本机存档装回来，并推上去 */
+    restoreBackup: function () {
+      var b = read(K_BACKUP, null);
+      if (!b || !b.keys) return false;
+      applyRemote(b.keys);
+      saveBackup(scopeKeys(), 'restore');
+      saveMeta();
+      pushNow(true);
+      return true;
+    },
     onChange: function (fn) {
       if (typeof fn === 'function') S.listeners.push(fn);
       return this;

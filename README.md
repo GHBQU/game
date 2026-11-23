@@ -141,8 +141,16 @@ crypto.subtle.digest('SHA-256', new TextEncoder().encode('arcade-invite-v1|' + �
 - **没登录 / 连不上**：照常写本机，等下次登录自动补传，不会丢档。
 - **防覆盖**：推送带版本号，别的设备已经写过就返回冲突，以服务器为准，避免旧档覆盖新档。
 
-已接入：星野物语、星野农庄、暗夜幸存者（含经典版）、深空幸存者、余烬守望、纸片勇者、超级卡丁车 8。
+已接入：星野物语、星野农庄、暗夜幸存者（含经典版）、深空幸存者、余烬守望、纸片勇者、
+超级卡丁车 8、迷渊回响（只同步解锁层数与最佳成绩）、IP, PLEASE 与 IPO, PLEASE（语言选择）。
 新增游戏只要加那一行 `<script>`，写法和键名对上就行。
+
+**故意不同步的**：画质、静音这类跟设备性能绑的设置（`maze-quality` / `maze-muted`），
+以及本机密码镜像 `paperhero.credentials.v1`、离线密钥、`arcade.api-mode`。
+换一台设备不该把手机画质改成电脑画质。
+
+覆盖前会先留底：本机这一份存进 `arcadeprog.backup.<game>`，
+需要时在控制台 `ArcadeProgress.restoreBackup()` 就能装回去。
 
 数据长这样（`GET /api/progress?token=…&game=starfield-farm`）：
 

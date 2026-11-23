@@ -8,3 +8,6 @@ __pycache__/
 # Wrangler 本地状态，不进仓库
 server/.wrangler/
 server/node_modules/
+
+# 本机的项目记忆，不进仓库
+.workbuddy/
