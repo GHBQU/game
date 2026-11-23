@@ -1,39 +1,57 @@
 /* ==========================================================================
    游戏厅 · 账号与门禁
    --------------------------------------------------------------------------
-   纯前端实现：账号存在本机 localStorage，不上传、不联网。
-   注意：这是「门禁」不是「安全」—— 打开控制台的人可以绕过。
+   账号存在服务器（Cloudflare Worker + Durable Object），不再只存本机：
+     · 注册 / 登录 / 邀请码 / 令牌都由服务端判定，浏览器只留一个令牌
+     · 换设备、换浏览器，用同一个账号就能登回来
+     · 所有游戏共用这一个账号，进度另由 arcade-progress.js 同步
+   服务连不上时用上次缓存的会话继续玩（门禁不锁人），但写操作一律要服务器。
+
+   ESP32 那套「板子自己当服务器」仍然可用：板子发站时把
+   <meta name="arcade-api"> 改写成 same-origin，这里就改调 /api/*。
+   meta 写 local 时退回纯浏览器模式（仅供离线演示，不推荐）。
 
    对外接口 window.Arcade：
-     INVITE                  邀请码原文
-     inviteOk(str)           邀请码是否正确
-     current()               当前登录用户 { name, invited, createdAt } | null
-     register(name, pw, invite) -> Promise<{ok, code, msg}>
-     login(name, pw)            -> Promise<{ok, code, msg}>
-     activateInvite(code)       -> {ok, msg}
+     apiMode                 后端模式：URL / 'same-origin' / 'local'
+     inviteOk(str)           邀请码是否正确（本机预检，最终以服务端为准）
+     current()               当前登录用户 { name, invited, remote } | null
+     token()                 当前令牌
+     me()                    向服务器核对一次会话 -> Promise<user|null>
+     syncSession()           同 me()，兼容旧调用
+     register(name, pw, invite) -> Promise<{ok, code, msg, token}>
+     login(name, pw)            -> Promise<{ok, code, msg, token}>
+     activateInvite(code)       -> Promise<{ok, msg}>
+     changePassword(old, next)  -> Promise<{ok, msg}>
      logout()
      status(now)             门禁总状态 { ok, code, user, open, cls, next }
-     formatNext(date)        把下次开放时间格式化成「明天 16:30」
-     dayLabel(date)          「2026-11-07 周六」
+     formatNext(date) / dayLabel(date) / windowText(windows)
+     legacyName()            旧版浏览器账号的名字（用于登录框预填）
    ========================================================================== */
 (function () {
   'use strict';
 
   /* 邀请码不在源码里存明文，只存摘要 —— 翻源码读不出原文。
      校验方式：sha256('arcade-invite-v1|' + 去掉空白后的输入) 与下面任一条相等即通过。
-     第二条是无 crypto.subtle（非 https / 老浏览器）时的兜底摘要。 */
+     第二条是无 crypto.subtle（非 https / 老浏览器）时的兜底摘要。
+     服务端用的是同一条 sha256 摘要，这里只做即时反馈。 */
   var INVITE_DIGESTS = [
     '1248225cb05b01163d46216ba6eb7b739feb52de74859fbfaf2a80e8309042c8',
     '65cb9a1a7eff733b'
   ];
-  var K_ACC = 'arcade.accounts.v1';
+  var K_ACC = 'arcade.accounts.v1';      // 旧版本机账号，只用于一次性搬家
   var K_SES = 'arcade.session.v1';
+  var K_MIG = 'arcade.migrated.v1';
+  var K_LEGACY = 'arcade.legacy-name.v1';
+
+  /* 统一账号服务地址。换域名只改这一处，或者改 index.html 里的 meta。 */
+  var DEFAULT_API = 'https://arcade.ghbqu.dpdns.org';
 
   /* 后端模式，由页面里的 <meta name="arcade-api"> 决定：
-       local        账号存本机 localStorage（GitHub Pages 用这个）
+       （不写）       调 DEFAULT_API 的统一账号服务（GitHub Pages 用这个）
        same-origin  调同源的 /api/*（板子自己发整站时用这个）
-       http(s)://…  调指定地址的 /api/*（板子挂在隧道后面时用这个）
-     ESP32 的静态服务在返回 index.html 时会把这里的值改写掉。 */
+       local        账号存本机 localStorage（离线演示用）
+       http(s)://…  调指定地址的 /api/*
+     ESP32 的静态服务在返回 index.html 时会把这里的值改写成 same-origin。 */
   var API_MODE = (function () {
     var m = document.querySelector('meta[name="arcade-api"]');
     var v = m ? String(m.getAttribute('content') || '').trim() : '';
@@ -41,7 +59,7 @@
     if (!v) {
       try { v = localStorage.getItem('arcade.api-mode') || ''; } catch (e) {}
     }
-    v = v || 'local';
+    v = v || DEFAULT_API;
     try { localStorage.setItem('arcade.api-mode', v); } catch (e) {}
     return v;
   })();
@@ -57,16 +75,19 @@
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(body);
     }
+    opts.cache = 'no-store';
     var ctrl = null;
     if (window.AbortController) {
       ctrl = new AbortController();
       opts.signal = ctrl.signal;
-      setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, timeoutMs || 6000);
+      setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, timeoutMs || 15000);
     }
     return fetch(apiUrl(path), opts).then(function (r) {
-      return r.json().catch(function () { return { ok: false, msg: '后端返回了无法解析的内容' }; });
+      return r.json().catch(function () {
+        return { ok: false, code: 'server', msg: '服务器返回了无法解析的内容' };
+      });
     }).catch(function () {
-      return { ok: false, code: 'offline', msg: '连不上账号服务，请确认板子开着' };
+      return { ok: false, code: 'offline', msg: '连不上账号服务，请检查网络后重试' };
     });
   }
 
@@ -85,6 +106,9 @@
     try { localStorage.setItem(key, JSON.stringify(val)); return true; }
     catch (e) { return false; }
   }
+  function drop(key) {
+    try { localStorage.removeItem(key); } catch (e) {}
+  }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function mmdd(d) { return pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
 
@@ -96,7 +120,7 @@
     });
   }
 
-  /* ---------------- 口令哈希 ---------------- */
+  /* ---------------- 口令哈希（仅本机模式 / 旧账号搬家用） ---------------- */
   function fnv(str) {
     var h1 = 0x811c9dc5, h2 = 0x01000193, i, c;
     for (i = 0; i < str.length; i++) {
@@ -135,34 +159,121 @@
     return s;
   }
 
-  /* ---------------- 账号 ---------------- */
+  /* ---------------- 会话 ---------------- */
   function allAccounts() { return read(K_ACC, {}); }
 
   function current() {
     var ses = read(K_SES, null);
     if (!ses || !ses.name) return null;
     if (useApi()) {
-      return { name: ses.name, invited: !!ses.invited, token: ses.token || null, remote: true };
+      /* 没有令牌 = 只是旧版留下的名字，不算登录 */
+      if (!ses.token) return null;
+      return {
+        name: ses.name,
+        invited: !!ses.invited,
+        token: ses.token,
+        remote: true,
+        stale: !!ses.stale
+      };
     }
     var acc = allAccounts()[String(ses.name).toLowerCase()];
     if (!acc) return null;
     return { name: acc.name, invited: !!acc.invited, createdAt: acc.createdAt };
   }
 
-  /* 向板子核对一次会话，刷新本地缓存里的 invited */
-  function syncSession() {
+  function token() {
+    var ses = read(K_SES, null);
+    return ses && ses.token ? ses.token : '';
+  }
+
+  function saveSession(r) {
+    write(K_SES, {
+      name: r.name,
+      invited: !!r.invited,
+      token: r.token,
+      at: Date.now(),
+      stale: false
+    });
+  }
+
+  /* 标记会话为「未核对」：服务器连不上时不清登录态，但下次能查到就刷新 */
+  function markStale() {
+    var ses = read(K_SES, null);
+    if (!ses) return;
+    ses.stale = true;
+    write(K_SES, ses);
+  }
+
+  /* 向服务器核对一次会话，刷新缓存里的 invited */
+  function me() {
     if (!useApi()) return Promise.resolve(current());
     var ses = read(K_SES, null);
     if (!ses || !ses.token) return Promise.resolve(null);
     return apiFetch('/me?token=' + encodeURIComponent(ses.token)).then(function (r) {
-      if (!r.ok) { try { localStorage.removeItem(K_SES); } catch (e) {} return null; }
-      ses.name = r.name;
-      ses.invited = !!r.invited;
-      write(K_SES, ses);
+      if (r && r.ok) {
+        ses.name = r.name;
+        ses.invited = !!r.invited;
+        ses.stale = false;
+        write(K_SES, ses);
+        return current();
+      }
+      if (r && r.code === 'auth') {
+        drop(K_SES);
+        return null;
+      }
+      /* offline：保留登录态，标记为待核对 */
+      markStale();
       return current();
     });
   }
 
+  function syncSession() { return me(); }
+
+  /* ---------------- 旧版本机账号一次性搬家 ---------------- */
+  function legacyName() {
+    var n = read(K_LEGACY, '');
+    if (n) return n;
+    var ses = read(K_SES, null);
+    if (ses && ses.name && !ses.token) return String(ses.name);
+    var accs = allAccounts();
+    var keys = Object.keys(accs);
+    return keys.length ? String(accs[keys[0]].name || '') : '';
+  }
+
+  function migrateLegacy() {
+    if (!useApi()) return Promise.resolve(null);
+    if (read(K_MIG, 0)) return Promise.resolve(null);
+    var accs = allAccounts();
+    var rows = Object.keys(accs).map(function (k) {
+      var a = accs[k];
+      if (!a || !a.name || !a.salt || !a.hash) return null;
+      return {
+        name: a.name,
+        salt: a.salt,
+        hash: a.hash,
+        invited: !!a.invited,
+        created: a.createdAt || 0
+      };
+    }).filter(Boolean);
+
+    if (!rows.length) { write(K_MIG, Date.now()); return Promise.resolve(null); }
+
+    return apiFetch('/migrate', { accounts: rows }).then(function (r) {
+      if (r && r.ok) {
+        write(K_MIG, Date.now());
+        if (rows.length === 1) write(K_LEGACY, rows[0].name);
+        /* 旧会话没有令牌：清掉，让首页引导重新登录一次（密码不变） */
+        var ses = read(K_SES, null);
+        if (ses && ses.name && !ses.token) {
+          write(K_LEGACY, String(ses.name));
+          drop(K_SES);
+        }
+      }
+      return r;
+    });
+  }
+
+  /* ---------------- 账号 ---------------- */
   function validateName(name) {
     var n = String(name || '').trim();
     if (n.length < 1) return '账号名不能为空';
@@ -173,8 +284,8 @@
 
   function register(name, pw, invite) {
     if (useApi()) {
-      return apiFetch('/register', { name: name, password: pw, invite: invite }).then(function (r) {
-        if (r.ok) write(K_SES, { name: r.name, invited: !!r.invited, token: r.token, at: Date.now() });
+      return apiFetch('/register', { name: name, password: pw, invite: invite }, 25000).then(function (r) {
+        if (r && r.ok) saveSession(r);
         return r;
       });
     }
@@ -193,13 +304,7 @@
     return inviteOk(invite).then(function (invited) {
       var salt = makeSalt();
       return hashPassword(p, salt).then(function (hash) {
-        accs[key] = {
-          name: n,
-          salt: salt,
-          hash: hash,
-          invited: invited,
-          createdAt: Date.now()
-        };
+        accs[key] = { name: n, salt: salt, hash: hash, invited: invited, createdAt: Date.now() };
         if (!write(K_ACC, accs)) {
           return { ok: false, code: 'storage', msg: '浏览器存储不可用，注册失败' };
         }
@@ -215,8 +320,8 @@
 
   function login(name, pw) {
     if (useApi()) {
-      return apiFetch('/login', { name: name, password: pw }).then(function (r) {
-        if (r.ok) write(K_SES, { name: r.name, invited: !!r.invited, token: r.token, at: Date.now() });
+      return apiFetch('/login', { name: name, password: pw }, 25000).then(function (r) {
+        if (r && r.ok) saveSession(r);
         return r;
       });
     }
@@ -241,7 +346,7 @@
       var ses = read(K_SES, null);
       if (!ses || !ses.token) return Promise.resolve({ ok: false, code: 'auth', msg: '登录已失效，请重新登录' });
       return apiFetch('/invite', { token: ses.token, invite: code }).then(function (r) {
-        if (r.ok) { ses.invited = true; write(K_SES, ses); }
+        if (r && r.ok) { ses.invited = true; write(K_SES, ses); }
         return r;
       });
     }
@@ -259,12 +364,26 @@
     });
   }
 
+  function changePassword(oldPw, newPw) {
+    if (!useApi()) return Promise.resolve({ ok: false, msg: '本机模式不支持改密码' });
+    var ses = read(K_SES, null);
+    if (!ses || !ses.token) return Promise.resolve({ ok: false, code: 'auth', msg: '登录已失效，请重新登录' });
+    return apiFetch('/password', {
+      token: ses.token,
+      oldPassword: oldPw,
+      newPassword: newPw
+    }).then(function (r) {
+      if (r && r.ok && r.token) { ses.token = r.token; write(K_SES, ses); }
+      return r;
+    });
+  }
+
   function logout() {
     var ses = read(K_SES, null);
     if (useApi() && ses && ses.token) {
-      try { apiFetch('/logout', { token: ses.token }); } catch (e) {}
+      try { apiFetch('/logout', { token: ses.token }, 4000); } catch (e) {}
     }
-    try { localStorage.removeItem(K_SES); } catch (e) {}
+    drop(K_SES);
   }
 
   /* ---------------- 日历 ---------------- */
@@ -424,12 +543,16 @@
   /* ---------------- 对外 ---------------- */
   window.Arcade = {
     apiMode: API_MODE,
+    serverUrl: API_MODE === 'same-origin' || API_MODE === 'local' ? '' : API_MODE,
     inviteOk: inviteOk,
     current: current,
+    token: token,
+    me: me,
     syncSession: syncSession,
     register: register,
     login: login,
     activateInvite: activateInvite,
+    changePassword: changePassword,
     logout: logout,
     status: status,
     classify: classify,
@@ -439,8 +562,15 @@
     formatNext: formatNext,
     windowText: windowText,
     dayLabel: dayLabel,
+    legacyName: legacyName,
+    migrateLegacy: migrateLegacy,
     dayName: function (d) { return DAY[d.getDay()]; }
   };
+
+  /* ---------------- 旧账号搬家（异步，不挡页面） ---------------- */
+  if (useApi()) {
+    try { migrateLegacy(); } catch (e) {}
+  }
 
   /* ---------------- 游戏页守卫 ---------------- */
   if (window.ARCADE_GUARD) {

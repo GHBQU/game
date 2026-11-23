@@ -41,6 +41,7 @@ import socket
 import network
 import time
 import os
+import re
 
 import arcade_core
 
@@ -232,12 +233,13 @@ def serve_static(conn, req):
         return
 
     # 主页需要把后端标记改写成同源，边读边改，不占内存
+    # 不管 <meta name="arcade-api"> 里原本写的是云端地址还是 local，板子都改成 same-origin
     if fs.endswith('index.html') and req['path'] in ('', '/'):
         send_all(conn, header('200 OK', MIME['.html']))
         with open(fs, 'r') as f:
             for line in f:
                 if 'name="arcade-api"' in line:
-                    line = line.replace('content="local"', 'content="same-origin"')
+                    line = re.sub(r'content="[^"]*"', 'content="same-origin"', line)
                 send_all(conn, line)
         return
 

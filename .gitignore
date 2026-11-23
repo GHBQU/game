@@ -4,3 +4,7 @@ tools/.board-data/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Wrangler 本地状态，不进仓库
+server/.wrangler/
+server/node_modules/

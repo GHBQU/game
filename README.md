@@ -1,6 +1,6 @@
 # 游戏厅 · 小宇.GAY
 
-五个纯静态网页游戏的收录站。五套可切换视觉风格，无构建步骤、无依赖、无后端、无追踪。
+十一个纯静态网页游戏的收录站。五套可切换视觉风格，无构建步骤、无打包依赖。账号和游戏进度存在自己的 Cloudflare Worker 上（`server/`），页面本身仍然是静态的。
 
 ## 五个游戏
 
@@ -16,7 +16,8 @@
 
 联机默认走 **Cloudflare Worker + Durable Object**，不用开小宇这台电脑：
 
-1. 房间 WebSocket、账号摘要、存档都在 `cloudflare/src/index.js` 的 `GameServer` DO 里。
+1. 房间 WebSocket 在纸片勇者那个 Worker（`paper-hero.ghbqu.dpdns.org`）里；
+   账号和存档在另一个 Worker（`arcade.ghbqu.dpdns.org`，源码在 `server/`）里。
 2. 纸片勇者的固定地址写在 `games/paper-hero/js/cloud.js`；
    暗夜幸存者直接连同一个 Worker。
 3. 本机 `tools/net_server.py` + 快速隧道只作为可选兜底，Cloudflare 正常时完全用不到。
@@ -43,8 +44,13 @@
 ```
 .
 ├── index.html                    # 主页（五套样式全部内联）
-├── arcade.js                     # 账号、邀请码、防沉迷时间窗、游戏页守卫
+├── arcade.js                     # 账号、邀请码、防沉迷时间窗、游戏页守卫（账号走服务端）
+├── arcade-progress.js            # 云存档：各游戏存档键 ↔ 服务器双向同步
 ├── holidays.js                   # 法定节假日 / 调休上班日 / 寒暑假数据
+├── server/                       # 统一账号与进度服务（Cloudflare Worker）
+│   ├── src/index.js              #   账号 + 按游戏存的进度，Durable Object
+│   ├── wrangler.toml
+│   └── README.md
 ├── CNAME                         # 自定义域名 小宇.是.gay
 ├── .nojekyll                     # 关闭 Jekyll 处理
 ├── esp32/                        # 用 ESP32 自己当服务器（见 esp32/README.md）
@@ -73,12 +79,12 @@
 
 ## 两种跑法
 
-| | 账号存哪 | 谁提供页面 | 需要常开什么 |
-|---|---|---|---|
-| **GitHub Pages**（小宇.是.gay） | 访客自己的浏览器 | GitHub | 无 |
-| **自己的 ESP32** | 板子 flash | 板子 | 只要板子 + 路由器 |
+| | 账号存哪 | 进度存哪 | 谁提供页面 | 需要常开什么 |
+|---|---|---|---|---|
+| **GitHub Pages**（小宇.是.gay） | `arcade.ghbqu.dpdns.org` | 同一台服务器 | GitHub | 无（Cloudflare 免费额度） |
+| **自己的 ESP32** | 板子 flash | 浏览器本机（板子还没实现进度接口，不跨设备） | 板子 | 只要板子 + 路由器 |
 
-同一份 `index.html` 两边通用：`<meta name="arcade-api" content="local">` 决定走哪种。ESP32 发站时会把它改写成 `same-origin`，前端自动改调 `/api/*`。详见 [esp32/README.md](esp32/README.md)。
+同一份 `index.html` 两边通用：`<meta name="arcade-api" content="https://arcade.ghbqu.dpdns.org">` 决定走哪台后端。ESP32 发站时会把这个 meta 改写成 `same-origin`，前端自动改调板子的 `/api/*`。详见 [esp32/README.md](esp32/README.md)。
 
 > ESP32 方案只能局域网访问。想让公网访客用，必须有公网 IP + 端口映射，或一台常开的设备做隧道 —— 板子自己跑不了 cloudflared/ngrok 这类 Go 二进制。
 
@@ -89,10 +95,16 @@
 ### 账号
 
 - 注册需要账号名 + 密码，邀请码可选。
-- 账号存在浏览器 `localStorage`（键 `arcade.accounts.v1`），密码用 `SHA-256(salt + 密码 + 固定串)` 存哈希，不存明文。
-- 换设备 / 清缓存 = 账号消失，**没有找回机制**。
+- 账号存在统一账号服务器（`server/`，Cloudflare Worker + Durable Object），**浏览器里只留一个令牌**。
+  密码用 `PBKDF2-SHA256`（随机盐，12000 轮）存摘要，明文既不落库也不落代码。
+- 换设备、换浏览器、清缓存都不影响：同一个账号登回来，进度跟着回来。
+- 浏览器 `localStorage` 里只有 `arcade.session.v1`（令牌 + 名字 + 邀请码状态，30 天有效）。
 
-> ⚠️ 这是「门禁」不是「安全」。纯静态站点没有后端，任何人打开控制台改 `localStorage` 都能绕过。它的作用是挡住随手点进来的人，不是防住铁了心要玩的人。
+**一个账号，所有游戏通用。** 首页、纸片勇者、农场、暗夜幸存者……用的是同一套登录态，
+不用在每个游戏里再注册一遍。
+
+> 旧版浏览器账号（`arcade.accounts.v1`）会在第一次打开时自动搬到服务器，密码不变；
+> 搬完后要重新登录一次，登录框会自动把原来的账号名填好。
 
 ### 邀请码
 
@@ -110,7 +122,35 @@ crypto.subtle.digest('SHA-256', new TextEncoder().encode('arcade-invite-v1|' + �
   .then(b => console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('')));
 ```
 
-> 摘要只能挡住「翻源码直接抄」。真要防住猜码，必须把校验放到服务端 —— 纯静态站点做不到。
+> 前端那份摘要只做即时反馈、挡「翻源码直接抄」。真正的判定在服务端
+> （`server/src/index.js` 的 `INVITE_DIGESTS`），改邀请码要同时改两处。
+
+### 云存档
+
+进度不再只躺在这台电脑上。`arcade-progress.js` 把每个游戏声明的存档键跟服务器对齐：
+
+```html
+<script src="../../arcade-progress.js"
+        data-game="starfield-farm"
+        data-keys="xingye_nongzhuang_save_v1"></script>
+```
+
+- **开局**：先拉服务器那一份。服务器更新就覆盖本机并自动刷一次页面；本机有没上传的改动就补传上去。
+- **游玩中**：对这些键的写入会被拦下来，1.5 秒后自动同步；关页面时还会再补一枪。
+- **换设备**：同一个账号登录，第一局前就把进度接回来。
+- **没登录 / 连不上**：照常写本机，等下次登录自动补传，不会丢档。
+- **防覆盖**：推送带版本号，别的设备已经写过就返回冲突，以服务器为准，避免旧档覆盖新档。
+
+已接入：星野物语、星野农庄、暗夜幸存者（含经典版）、深空幸存者、余烬守望、纸片勇者、超级卡丁车 8。
+新增游戏只要加那一行 `<script>`，写法和键名对上就行。
+
+数据长这样（`GET /api/progress?token=…&game=starfield-farm`）：
+
+```json
+{ "ok": true, "game": "starfield-farm",
+  "data": { "v": 1, "keys": { "xingye_nongzhuang_save_v1": "{\"day\":12}" } },
+  "updated": 1795431354941 }
+```
 
 ### 防沉迷时间窗
 
@@ -172,4 +212,15 @@ python3 -m http.server 8899
 
 ## 部署
 
-GitHub Pages，分支 `main`，目录选 **根目录 `/`**（不要选 `/docs`）。
+分两块，互相独立：
+
+**页面（GitHub Pages）**：分支 `main`，目录选 **根目录 `/`**（不要选 `/docs`）。
+
+**账号与进度（Cloudflare Worker）**：源码在 `server/`，见 [server/README.md](server/README.md)。
+
+```bash
+cd server
+npx wrangler deploy        # 部署到 arcade.ghbqu.dpdns.org
+```
+
+改完 `server/src/index.js` 记得重新 `deploy`，否则前端调的还是旧版本。

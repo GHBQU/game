@@ -44,7 +44,7 @@
       this.foot = document.getElementById('accFoot');
       this.title = document.getElementById('accTitle');
       const lead = this.el.querySelector('.acc-lead');
-      if (lead) lead.textContent = '和游戏厅主页账号互通，游戏里不注册。服务在线时账号存在 Cloudflare，离线才存本机浏览器。';
+      if (lead) lead.textContent = '和游戏厅主页账号互通，游戏里不注册。账号存在统一账号服务器上，所有游戏共用；离线时才用本机浏览器里的镜像。';
       document.getElementById('accClose').addEventListener('click', () => this.close());
       this.el.addEventListener('mousedown', (e) => {
         if (e.target.classList && e.target.classList.contains('acc-backdrop')) this.close();
@@ -99,7 +99,7 @@
       const home = id ? id.homeUrl() : '';
       const homeLink = home
         ? '<a class="id-link" href="' + esc(home) + '">去主页注册 / 登录</a>'
-        : '在游戏厅主页注册一次；服务在线时账号会存到 Cloudflare';
+        : '在游戏厅主页注册一次；账号存在统一账号服务器上';
 
       if (u) {
         const off = u.source === 'offline';
@@ -129,7 +129,7 @@
           '就能用本机保存的主页账号继续玩；不登录也能直接单机。</p>' +
           '<button class="acc-btn primary" data-act="toKey">输入离线密钥</button>' +
           '<button class="acc-btn ghost" data-act="toLogin">用本机账号登录</button>' +
-          '<p class="acc-tip">' + homeLink + '。账号密码只存加盐摘要：服务在线存 Cloudflare，离线存本机浏览器。</p>'
+          '<p class="acc-tip">' + homeLink + '。账号密码只存加盐摘要：服务器上是 PBKDF2，本机镜像只用于服务器连不上时。</p>'
         );
       }
       return (
@@ -137,9 +137,9 @@
         '<span class="id-av">?</span>' +
         '<span class="id-who"><b>还没有登录</b><i>游戏里不注册，直接用已有账号</i></span>' +
         '<span class="id-badge">未登录</span></div>' +
-        '<p class="id-note">账号和档案是同一个：登录后会按账号名自动对上进度。服务在线时账号存在 Cloudflare 上，别的设备也能登录。</p>' +
+        '<p class="id-note">账号和档案是同一个：登录后会按账号名自动对上进度。账号存在统一账号服务器上，别的设备也能登录。</p>' +
         '<button class="acc-btn primary" data-act="toLogin">登录已有账号</button>' +
-        '<p class="acc-tip">' + homeLink + '。账号密码只存加盐摘要：服务在线存 Cloudflare，离线存本机浏览器。</p>'
+        '<p class="acc-tip">' + homeLink + '。账号密码只存加盐摘要：服务器上是 PBKDF2，本机镜像只用于服务器连不上时。</p>'
       );
     },
 
@@ -170,7 +170,7 @@
         '<p class="id-note">' +
         (off
           ? '服务离线：先确认密钥已验证，再用本机保存的账号密码登录。'
-          : '服务在线：直接用账号密码登录，账号存在 Cloudflare；服务器离线时会自动改用本机保存的账号。') +
+          : '服务在线：直接用账号密码登录，账号存在统一账号服务器；服务器离线时会自动改用本机保存的账号。') +
         '</p>' + opts +
         '<div class="acc-field"><label>用户名</label>' +
         '<input id="idName" type="text" autocomplete="username" placeholder="账号用户名" /></div>' +
@@ -220,7 +220,7 @@
         '<span>限时 <b>' + s.challenge + '</b> 张</span></div>' +
         '<div class="acc-label">切换本机分档</div>' +
         '<div class="acc-list">' + rows + '</div>' +
-        '<p class="acc-tip">需要新账号就到游戏厅主页注册；服务在线时账号存到 Cloudflare，离线才存本机浏览器。' +
+        '<p class="acc-tip">需要新账号就到游戏厅主页注册；账号存在统一账号服务器上，离线才用本机浏览器里的镜像。' +
         '换电脑或清理浏览器数据会丢进度，记得别清缓存。</p>'
       );
     },

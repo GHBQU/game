@@ -14,6 +14,7 @@
 
 import json
 import os
+import re
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -117,7 +118,10 @@ class Handler(BaseHTTPRequestHandler):
         if path in ('/', '') and fs.endswith('index.html'):
             # 与板子一致：把后端标记改写成同源
             with open(fs, 'r', encoding='utf-8') as f:
-                html = f.read().replace('content="local"', 'content="same-origin"')
+                html = re.sub(
+                    r'(<meta name="arcade-api" content=")[^"]*(")',
+                    r'\1same-origin\2',
+                    f.read())
             body = html.encode('utf-8')
         else:
             with open(fs, 'rb') as f:

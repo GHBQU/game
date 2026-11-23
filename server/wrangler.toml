@@ -1,0 +1,20 @@
+name = "arcade"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+workers_dev = true
+
+# 自定义域名：国内能直连，不用走 workers.dev
+routes = [
+  { pattern = "arcade.ghbqu.dpdns.org", custom_domain = true }
+]
+
+# 一个 Durable Object 管全部账号 + 全部存档：单点写入，不会互相覆盖
+[durable_objects]
+bindings = [{ name = "ARCADE", class_name = "ArcadeServer" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ArcadeServer"]
+
+[observability]
+enabled = true

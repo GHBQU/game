@@ -409,7 +409,7 @@
 
     // 本机服务器存档：服务在线 + 已登录（账号可以来自本机服务器，也可以是游戏厅主页）
     useAccount() {
-      return this.status === 'online' && !!this.account;
+      return !!this.account;
     },
 
     displayName() {
@@ -429,30 +429,24 @@
       }
     },
 
-    /* ---------------- 云端（本机）存档 ---------------- */
+    /* ---------------- 云存档 ----------------
+     * 存档不再按「账号名」直接 PUT 一整块，那样谁都能用别人的名字覆盖。
+     * 现在交给 arcade-progress.js：按「账号令牌 + 游戏」同步本机档案键，
+     * 有版本号防覆盖，也不需要在游戏里再维护一套。
+     */
     async pullSave() {
-      if (!this.useAccount()) return null;
-      try {
-        const r = await fetch(this.endpoint + '/api/save?account=' + encodeURIComponent(this.account.name), {
-          cache: 'no-store',
-        });
-        const j = await r.json();
-        return j && j.ok ? j.data : null;
-      } catch (e) {
-        return null;
-      }
+      // 开局前 arcade-progress.js 已经对齐过服务器与本机，这里不需要再合并
+      if (!window.ArcadeProgress) return null;
+      if (window.ArcadeProgress.status === 'offline') return null;
+      return null;
     },
 
     async pushSave(data) {
       if (!this.useAccount()) return false;
+      if (!window.ArcadeProgress) return false;
       try {
-        const r = await fetch(this.endpoint + '/api/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ account: this.account.name, data }),
-        });
-        const j = await r.json();
-        return !!(j && j.ok);
+        const r = await window.ArcadeProgress.push();
+        return !!(r && r.ok);
       } catch (e) {
         return false;
       }

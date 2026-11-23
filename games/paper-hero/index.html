@@ -98,6 +98,13 @@
   <!-- 游戏厅账号（部署在 games/paper-hero/ 时才有；本地单机跑这里 404，正常） -->
   <script src="../../holidays.js" onerror="void 0"></script>
   <script src="../../arcade.js" onerror="void 0"></script>
+  <!-- 进度跟着账号走：档案存服务器，换设备接着玩。
+       账号凭据/会话是本机的，不同步，别把它们传上去。 -->
+  <script src="../../arcade-progress.js"
+          data-game="paper-hero"
+          data-prefix="paperhero."
+          data-keys="paperhero.profiles,paperhero.currentProfile"
+          data-exclude="paperhero.credentials.v1,paperhero.offlinekey.v1,paperhero.offlinesession.v1,paperhero.serversession.v1"></script>
 
   <script src="js/util.js"></script>
   <script src="js/config.js"></script>

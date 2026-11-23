@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<!-- 账号后端：local = 存本机浏览器；ESP32 发站时会把它改写成 same-origin -->
-<meta name="arcade-api" content="local">
+<!-- 账号后端：账号存在这台统一账号服务器上（见 server/）。
+     留空则用 arcade.js 里的默认地址；ESP32 发站时会把它改写成 same-origin。 -->
+<meta name="arcade-api" content="https://arcade.ghbqu.dpdns.org">
 <title>游戏厅 · 小宇.GAY</title>
 <meta name="description" content="十一个纯静态网页游戏：像素剧情、顶视角生存射击、手绘横版闯关、3D 卡丁车、太空割草、3D 迷宫、哥特生存、复古射击、资金审查、像素沙盒与农场生活。打开就能玩，不登录、不下载、不追踪。">
 <meta property="og:type" content="website">
@@ -1995,6 +1996,13 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
       setTab('login');
       fLogin.reset(); fReg.reset();
       clearMsg(fLogin); clearMsg(fReg);
+      /* 旧版本机账号搬到服务器后，把名字填回来，省得再想一遍 */
+      var oldName = Arcade.legacyName ? Arcade.legacyName() : '';
+      var nameInput = fLogin.querySelector('[name="name"]');
+      if (oldName && nameInput && !nameInput.value){
+        nameInput.value = oldName;
+        setMsg(fLogin, '账号已经搬到服务器了，密码不变，登录一次就能继续。', true);
+      }
     } else if (code === 'invite' || !st.user.invited){
       showPanel('invite');
       $('invite-hello').textContent = '你好 ' + st.user.name + '，账号已创建，但还没有激活游玩权限。';
@@ -2026,6 +2034,33 @@ html[data-style="glass"] button:focus-visible{outline:2px solid #0a84ff;outline-
     $('time-info').innerHTML = rows.map(function(r, i){
       return '<div><dt>' + r[0] + '</dt><dd' + (i === 2 ? ' class="hot"' : '') + '>' + esc(r[1]) + '</dd></div>';
     }).join('');
+    /* 云存档：告诉玩家进度确实存在服务器上，换设备也带得走 */
+    var box = document.createElement('div');
+    box.innerHTML = '<dt>云存档</dt><dd id="cloud-save">读取中…</dd>';
+    $('time-info').appendChild(box);
+    loadCloud();
+  }
+
+  function loadCloud(){
+    var dd = $('cloud-save');
+    if (!dd) return;
+    var token = Arcade.token ? Arcade.token() : '';
+    if (!token){ dd.textContent = '登录后自动同步'; return; }
+    var url = (Arcade.serverUrl || '') + '/api/progress/list?token=' + encodeURIComponent(token);
+    fetch(url, { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+      var el = $('cloud-save');
+      if (!el) return;
+      if (j && j.ok){
+        el.textContent = j.games && j.games.length
+          ? j.games.length + ' 个游戏的进度已存在服务器'
+          : '还没有存档';
+      } else {
+        el.textContent = '读取失败';
+      }
+    }).catch(function(){
+      var el = $('cloud-save');
+      if (el) el.textContent = '连不上账号服务器';
+    });
   }
   function pad(n){ return (n < 10 ? '0' : '') + n; }
   function esc(s){
