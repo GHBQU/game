@@ -160,6 +160,7 @@
     busy: false,
     dirty: false,
     restored: false,
+    notified: false,
     listeners: []
   };
 
@@ -329,6 +330,7 @@
       saveMeta();
       applyRemote(serverData);
       S.restored = true;
+      S.notified = true;
       emit('restored');
       if (looked === serverUpdated) {
         /* 已经为这一版刷过一次，说明是游戏又写回了旧值，不再刷，免死循环 */
@@ -388,6 +390,11 @@
       S.dirty = false;
       saveMeta();
       emit('synced');
+      if (!S.notified) {
+        S.notified = true;
+        var u = session();
+        toast('云存档已同步' + (u && u.name ? ' · ' + u.name : ''));
+      }
       return r;
     }).catch(function () {
       S.busy = false;
