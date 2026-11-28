@@ -1,0 +1,329 @@
+{
+  "apk": "game.apk",
+  "size_bytes": 209408645,
+  "sha256": "1e12a5557fda0f096a4ee38004623feaa46b8233644638d040ae72989cfb4b54",
+  "errors": [],
+  "entry_count": 4009,
+  "manifest": {
+    "package": "com.RobotGentleman.game60SecondsReatomized",
+    "version_name": "1.2.4.81",
+    "version_code": 81,
+    "min_sdk": 22,
+    "target_sdk": 34,
+    "launchable_activities": [
+      {
+        "name": "com.unity3d.player.UnityPlayerActivity",
+        "kind": "activity",
+        "target_activity": null,
+        "enabled": true,
+        "exported": true
+      }
+    ]
+  },
+  "native_libraries": [
+    {
+      "path": "lib/arm64-v8a/libfmod.so",
+      "abi": "arm64-v8a",
+      "size_bytes": 1190720,
+      "bits": 64,
+      "endianness": "little",
+      "machine_id": 183,
+      "architecture": "AArch64",
+      "needed": [
+        "liblog.so",
+        "libstdc++.so",
+        "libm.so",
+        "libc.so",
+        "libdl.so"
+      ]
+    },
+    {
+      "path": "lib/armeabi-v7a/libfmod.so",
+      "abi": "armeabi-v7a",
+      "size_bytes": 989564,
+      "bits": 32,
+      "endianness": "little",
+      "machine_id": 40,
+      "architecture": "ARM",
+      "needed": [
+        "liblog.so",
+        "libstdc++.so",
+        "libm.so",
+        "libc.so",
+        "libdl.so"
+      ]
+    },
+    {
+      "path": "lib/armeabi-v7a/libunity.so",
+      "abi": "armeabi-v7a",
+      "size_bytes": 14554316,
+      "bits": 32,
+      "endianness": "little",
+      "machine_id": 40,
+      "architecture": "ARM",
+      "needed": [
+        "libmain.so",
+        "libandroid.so",
+        "liblog.so",
+        "libz.so",
+        "libEGL.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "lib/armeabi-v7a/libresonanceaudio.so",
+      "abi": "armeabi-v7a",
+      "size_bytes": 669728,
+      "bits": 32,
+      "endianness": "little",
+      "machine_id": 40,
+      "architecture": "ARM",
+      "needed": [
+        "liblog.so",
+        "libstdc++.so",
+        "libm.so",
+        "libc.so",
+        "libdl.so"
+      ]
+    },
+    {
+      "path": "lib/armeabi-v7a/libfmodstudio.so",
+      "abi": "armeabi-v7a",
+      "size_bytes": 706164,
+      "bits": 32,
+      "endianness": "little",
+      "machine_id": 40,
+      "architecture": "ARM",
+      "needed": [
+        "liblog.so",
+        "libfmod.so",
+        "libstdc++.so",
+        "libm.so",
+        "libc.so",
+        "libdl.so"
+      ]
+    },
+    {
+      "path": "lib/arm64-v8a/libfmodstudio.so",
+      "abi": "arm64-v8a",
+      "size_bytes": 1091312,
+      "bits": 64,
+      "endianness": "little",
+      "machine_id": 183,
+      "architecture": "AArch64",
+      "needed": [
+        "liblog.so",
+        "libfmod.so",
+        "libstdc++.so",
+        "libm.so",
+        "libc.so",
+        "libdl.so"
+      ]
+    },
+    {
+      "path": "lib/arm64-v8a/libmain.so",
+      "abi": "arm64-v8a",
+      "size_bytes": 10416,
+      "bits": 64,
+      "endianness": "little",
+      "machine_id": 183,
+      "architecture": "AArch64",
+      "needed": [
+        "liblog.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "lib/armeabi-v7a/libmain.so",
+      "abi": "armeabi-v7a",
+      "size_bytes": 22304,
+      "bits": 32,
+      "endianness": "little",
+      "machine_id": 40,
+      "architecture": "ARM",
+      "needed": [
+        "liblog.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "lib/arm64-v8a/libil2cpp.so",
+      "abi": "arm64-v8a",
+      "size_bytes": 47002552,
+      "bits": 64,
+      "endianness": "little",
+      "machine_id": 183,
+      "architecture": "AArch64",
+      "needed": [
+        "liblog.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "lib/armeabi-v7a/libil2cpp.so",
+      "abi": "armeabi-v7a",
+      "size_bytes": 42324388,
+      "bits": 32,
+      "endianness": "little",
+      "machine_id": 40,
+      "architecture": "ARM",
+      "needed": [
+        "liblog.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "lib/arm64-v8a/libresonanceaudio.so",
+      "abi": "arm64-v8a",
+      "size_bytes": 990344,
+      "bits": 64,
+      "endianness": "little",
+      "machine_id": 183,
+      "architecture": "AArch64",
+      "needed": [
+        "liblog.so",
+        "libstdc++.so",
+        "libm.so",
+        "libc.so",
+        "libdl.so"
+      ]
+    },
+    {
+      "path": "lib/arm64-v8a/libunity.so",
+      "abi": "arm64-v8a",
+      "size_bytes": 19122232,
+      "bits": 64,
+      "endianness": "little",
+      "machine_id": 183,
+      "architecture": "AArch64",
+      "needed": [
+        "libmain.so",
+        "libandroid.so",
+        "liblog.so",
+        "libz.so",
+        "libEGL.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ]
+    }
+  ],
+  "abis": [
+    "arm64-v8a",
+    "armeabi-v7a"
+  ],
+  "dll_files": [],
+  "source_files": [],
+  "unity": {
+    "detected": true,
+    "versions": [
+      "2021.3.40f1"
+    ],
+    "il2cpp": true,
+    "managed_files": [
+      "assets/bin/Data/Managed/Resources/dfScriptLite.dll-resources.dat",
+      "assets/bin/Data/Managed/Resources/mscorlib.dll-resources.dat",
+      "assets/bin/Data/Managed/Metadata/global-metadata.dat"
+    ],
+    "metadata": {
+      "path": "assets/bin/Data/Managed/Metadata/global-metadata.dat",
+      "magic": "0xfab11baf",
+      "version": 31,
+      "size_bytes": 9818688
+    },
+    "assembly_names": [
+      "UnityEngine.dll",
+      "UnityEngine.AIModule.dll",
+      "UnityEngine.ARModule.dll",
+      "UnityEngine.AccessibilityModule.dll",
+      "UnityEngine.AndroidJNIModule.dll",
+      "UnityEngine.AnimationModule.dll",
+      "UnityEngine.AssetBundleModule.dll",
+      "UnityEngine.AudioModule.dll",
+      "UnityEngine.ClothModule.dll",
+      "UnityEngine.CoreModule.dll",
+      "UnityEngine.CrashReportingModule.dll",
+      "UnityEngine.DSPGraphModule.dll",
+      "UnityEngine.DirectorModule.dll",
+      "UnityEngine.GIModule.dll",
+      "UnityEngine.GameCenterModule.dll",
+      "UnityEngine.GridModule.dll",
+      "UnityEngine.HotReloadModule.dll",
+      "UnityEngine.IMGUIModule.dll",
+      "UnityEngine.ImageConversionModule.dll",
+      "UnityEngine.InputModule.dll",
+      "UnityEngine.InputLegacyModule.dll",
+      "UnityEngine.JSONSerializeModule.dll",
+      "UnityEngine.LocalizationModule.dll",
+      "UnityEngine.ParticleSystemModule.dll",
+      "UnityEngine.PerformanceReportingModule.dll",
+      "UnityEngine.PhysicsModule.dll",
+      "UnityEngine.Physics2DModule.dll",
+      "UnityEngine.ProfilerModule.dll",
+      "UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll",
+      "UnityEngine.ScreenCaptureModule.dll",
+      "UnityEngine.SharedInternalsModule.dll",
+      "UnityEngine.SpriteMaskModule.dll",
+      "UnityEngine.SpriteShapeModule.dll",
+      "UnityEngine.StreamingModule.dll",
+      "UnityEngine.SubstanceModule.dll",
+      "UnityEngine.SubsystemsModule.dll",
+      "UnityEngine.TLSModule.dll",
+      "UnityEngine.TerrainModule.dll",
+      "UnityEngine.TerrainPhysicsModule.dll",
+      "UnityEngine.TextCoreFontEngineModule.dll",
+      "UnityEngine.TextCoreTextEngineModule.dll",
+      "UnityEngine.TextRenderingModule.dll",
+      "UnityEngine.TilemapModule.dll",
+      "UnityEngine.UIModule.dll",
+      "UnityEngine.UIElementsModule.dll",
+      "UnityEngine.UIElementsNativeModule.dll",
+      "UnityEngine.UNETModule.dll",
+      "UnityEngine.UmbraModule.dll",
+      "UnityEngine.UnityAnalyticsModule.dll",
+      "UnityEngine.UnityAnalyticsCommonModule.dll",
+      "UnityEngine.UnityConnectModule.dll",
+      "UnityEngine.UnityCurlModule.dll",
+      "UnityEngine.UnityTestProtocolModule.dll",
+      "UnityEngine.UnityWebRequestModule.dll",
+      "UnityEngine.UnityWebRequestAssetBundleModule.dll",
+      "UnityEngine.UnityWebRequestAudioModule.dll",
+      "UnityEngine.UnityWebRequestTextureModule.dll",
+      "UnityEngine.UnityWebRequestWWWModule.dll",
+      "UnityEngine.VFXModule.dll",
+      "UnityEngine.VRModule.dll",
+      "UnityEngine.VehiclesModule.dll",
+      "UnityEngine.VideoModule.dll",
+      "UnityEngine.WindModule.dll",
+      "UnityEngine.XRModule.dll",
+      "Assembly-CSharp-firstpass.dll",
+      "Assembly-CSharp.dll",
+      "Google.Play.Core.dll",
+      "FMODUnity.dll",
+      "Unity.Timeline.dll",
+      "Unity.TextMeshPro.dll",
+      "NativeGallery.Runtime.dll",
+      "FMODUnityResonance.dll",
+      "UnityEngine.UI.dll",
+      "Google.Play.Review.dll",
+      "EZCameraShake.dll",
+      "Unity.Analytics.DataPrivacy.dll",
+      "Google.Play.Common.dll",
+      "dfScriptLite.dll",
+      "Rewired_Core.dll",
+      "Rewired_Android.dll",
+      "Unity.Tasks.dll",
+      "Unity.Compat.dll"
+    ]
+  }
+}
