@@ -237,3 +237,216 @@ class Auth:
             'users': len(self.store.accounts),
             'uptime': _now(),
         }
+
+
+# ---------------------------------------------------------------- 云存档
+GAME_RE_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789_-'
+MAX_SAVE = 256 * 1024          # 单个游戏存档上限（和 Cloudflare 那份一致）
+MAX_GAMES = 80
+
+
+def clean_game(raw):
+    """游戏名做一次白名单校验，顺便挡住 ../ 之类的路径穿越。"""
+    name = str(raw or '').strip().lower()
+    if not name or len(name) > 32:
+        return ''
+    first = name[0]
+    if not (first.isalnum() and first not in '_-'):
+        return ''
+    for ch in name:
+        if ch not in GAME_RE_CHARS:
+            return ''
+    return name
+
+
+def _now_ms():
+    """版本号用毫秒时间戳；板子没对上时间时会退化成开机秒数，仍然单调递增。"""
+    t = time.time()
+    return int(t * 1000) if t > 1000000000 else int(t * 1000)
+
+
+class Progress:
+    """每个账号每个游戏一份 JSON，带版本号做乐观锁。
+
+    目录：/data/progress/<账号散列>/<游戏>.json
+    用散列当目录名，避免中文账号名在文件系统里出问题。
+    """
+
+    def __init__(self, store, auth, root=None):
+        self.store = store
+        self.auth = auth
+        self.root = (root or (store.root + '/progress'))
+        try:
+            os.mkdir(self.root)
+        except OSError:
+            pass
+
+    # --- 路径 ---
+    def _dir(self, key):
+        tag = _hex(hashlib.sha256(key.encode('utf-8')).digest())[:16]
+        path = self.root + '/' + tag
+        try:
+            os.mkdir(path)
+        except OSError:
+            pass
+        return path
+
+    def _path(self, key, game):
+        return self._dir(key) + '/' + game + '.json'
+
+    def _read(self, key, game):
+        for cand in (self._path(key, game), self._path(key, game) + '.tmp'):
+            try:
+                with open(cand, 'r') as f:
+                    row = json.loads(f.read())
+                if isinstance(row, dict):
+                    return row
+            except Exception:
+                pass
+        return None
+
+    def _write(self, key, game, row):
+        path = self._path(key, game)
+        tmp = path + '.tmp'
+        with open(tmp, 'w') as f:
+            f.write(json.dumps(row))
+        try:
+            os.rename(tmp, path)
+        except OSError:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+            os.rename(tmp, path)
+
+    def _games_of(self, key):
+        out = []
+        try:
+            for name in os.listdir(self._dir(key)):
+                if not name.endswith('.json'):
+                    continue
+                out.append(name[:-5])
+        except OSError:
+            pass
+        return out
+
+    # --- 对外 ---
+    def get(self, token, game_raw):
+        key, acc = self.auth._account_by_token(token)
+        if not acc:
+            return {'ok': False, 'code': 'auth', 'msg': '登录已失效，请重新登录'}
+        game = clean_game(game_raw)
+        if not game:
+            return {'ok': False, 'code': 'game', 'msg': '缺少游戏名'}
+        row = self._read(key, game)
+        if not row:
+            return {'ok': True, 'game': game, 'data': None, 'updated': 0}
+        return {
+            'ok': True, 'game': game,
+            'data': row.get('data'),
+            'updated': row.get('updated', 0),
+            'clientAt': row.get('clientAt', 0),
+        }
+
+    def save(self, body, token):
+        key, acc = self.auth._account_by_token(token or body.get('token'))
+        if not acc:
+            return {'ok': False, 'code': 'auth', 'msg': '登录已失效，请重新登录'}
+        game = clean_game(body.get('game'))
+        if not game:
+            return {'ok': False, 'code': 'game', 'msg': '缺少游戏名'}
+        data = body.get('data')
+        if not isinstance(data, dict):
+            return {'ok': False, 'code': 'data', 'msg': '存档格式不对'}
+        try:
+            size = len(json.dumps(data))
+        except Exception:
+            return {'ok': False, 'code': 'data', 'msg': '存档无法序列化'}
+        if size > MAX_SAVE:
+            return {'ok': False, 'code': 'big', 'msg': '存档太大了'}
+
+        existing = self._read(key, game)
+        cur = existing.get('updated', 0) if existing else 0
+        base = body.get('base')
+        if isinstance(base, int):
+            if cur != base:
+                return {
+                    'ok': False, 'code': 'conflict', 'game': game,
+                    'updated': cur,
+                    'data': existing.get('data') if existing else None,
+                    'msg': '云端存档已经变过了',
+                }
+        if not existing and len(self._games_of(key)) >= MAX_GAMES:
+            return {'ok': False, 'code': 'full', 'msg': '这个账号的存档数量已达上限'}
+
+        now = _now_ms()
+        if now <= cur:
+            now = cur + 1
+        self._write(key, game, {
+            'data': data,
+            'updated': now,
+            'clientAt': int(body.get('clientAt') or 0),
+        })
+        return {'ok': True, 'game': game, 'updated': now, 'size': size}
+
+    def list_games(self, token):
+        key, acc = self.auth._account_by_token(token)
+        if not acc:
+            return {'ok': False, 'code': 'auth', 'msg': '登录已失效，请重新登录'}
+        games = []
+        for game in self._games_of(key):
+            row = self._read(key, game) or {}
+            games.append({'game': game, 'updated': row.get('updated', 0)})
+        games.sort(key=lambda g: g['game'])
+        return {'ok': True, 'games': games}
+
+    def all(self, token):
+        key, acc = self.auth._account_by_token(token)
+        if not acc:
+            return {'ok': False, 'code': 'auth', 'msg': '登录已失效，请重新登录'}
+        items = {}
+        for game in self._games_of(key):
+            row = self._read(key, game) or {}
+            items[game] = {'data': row.get('data'), 'updated': row.get('updated', 0)}
+        return {'ok': True, 'items': items}
+
+    def delete(self, body, token):
+        key, acc = self.auth._account_by_token(token or body.get('token'))
+        if not acc:
+            return {'ok': False, 'code': 'auth', 'msg': '登录已失效，请重新登录'}
+        game = clean_game(body.get('game'))
+        if not game:
+            return {'ok': False, 'code': 'game', 'msg': '缺少游戏名'}
+        try:
+            os.remove(self._path(key, game))
+        except OSError:
+            pass
+        return {'ok': True, 'game': game}
+
+    def bulk(self, body, token):
+        key, acc = self.auth._account_by_token(token or body.get('token'))
+        if not acc:
+            return {'ok': False, 'code': 'auth', 'msg': '登录已失效，请重新登录'}
+        items = body.get('items') if isinstance(body.get('items'), dict) else {}
+        imported, skipped = [], []
+        now = _now_ms()
+        for raw in list(items.keys())[:40]:
+            game = clean_game(raw)
+            data = items[raw]
+            if not game or not isinstance(data, dict):
+                skipped.append(raw)
+                continue
+            try:
+                if len(json.dumps(data)) > MAX_SAVE:
+                    skipped.append(raw)
+                    continue
+            except Exception:
+                skipped.append(raw)
+                continue
+            if self._read(key, game):
+                skipped.append(game)
+                continue
+            now += 1
+            self._write(key, game, {'data': data, 'updated': now, 'clientAt': 0})
+            imported.append(game)
+        return {'ok': True, 'imported': imported, 'skipped': skipped}

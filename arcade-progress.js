@@ -83,7 +83,19 @@
   function apiMode() {
     if (window.Arcade && window.Arcade.apiMode) return window.Arcade.apiMode;
     var v = '';
-    try { v = localStorage.getItem('arcade.api-mode') || ''; } catch (e) {}
+    /* ?api=http://板子IP：页面在 Pages 上、后端在板子上 */
+    try {
+      var q = String(new URLSearchParams(location.search).get('api') || '').trim();
+      if (q) {
+        if (q !== 'local' && q !== 'same-origin' && !/^https?:\/\//i.test(q)) q = 'http://' + q;
+        localStorage.setItem('arcade.api-mode', q);
+        v = q;
+      }
+    } catch (e) {}
+    try { if (!v) v = localStorage.getItem('arcade.api-mode') || ''; } catch (e) {}
+    /* 板子/局域网托管整站时是 http 直接访问：没有标记也走同源，
+       否则直接打开某个游戏页会把存档推到云端，跨设备就对不上了 */
+    if (!v && location.protocol !== 'https:' && location.host) v = 'same-origin';
     if (!v) v = DEFAULT_API;
     if (v === 'local' && session()) {
       v = DEFAULT_API;

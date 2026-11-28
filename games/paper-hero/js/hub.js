@@ -453,8 +453,21 @@
     },
 
     /* ---------------- 给 net.js 用 ---------------- */
-    wsUrl() {
+    // 同源地址：整站由板子（或本机）托管时，/ws 就在同一台机器上，走它延迟最低
+    localWs() {
+      if (!location.host) return '';
+      if (location.protocol === 'https:') return '';
+      return 'ws://' + location.host + '/ws';
+    },
+
+    wsUrl(preferLocal) {
+      if (preferLocal) {
+        const local = this.localWs();
+        if (local) return local;
+      }
       if (this.endpoint) return this.endpoint.replace(/^http/, 'ws') + '/ws';
+      const local = this.localWs();
+      if (local) return local;
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
       return proto + '//' + (location.host || 'localhost:8777') + '/ws';
     },

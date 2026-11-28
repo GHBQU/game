@@ -52,13 +52,26 @@
       this._wait = null;
     },
 
+    // 候选地址：局域网同源优先，连不上再回落到 Cloudflare / 隧道
+    urls() {
+      const out = [];
+      const local = PH.Hub && PH.Hub.localWs ? PH.Hub.localWs() : '';
+      if (local) out.push(local);
+      const cloud = PH.Hub && PH.Hub.wsUrl ? PH.Hub.wsUrl(false) : this.url();
+      if (cloud && out.indexOf(cloud) < 0) out.push(cloud);
+      if (!out.length) out.push(this.url());
+      return out;
+    },
+
     connect() {
       if (this.status === 'open') return Promise.resolve();
       if (this._wait) return this._wait;
       this.status = 'connecting';
       this.error = '';
+      const list = this.urls();
       this._wait = new Promise((resolve, reject) => {
         let settled = false;
+        let idx = 0;
         const fail = (msg) => {
           if (settled) return;
           settled = true;
@@ -67,66 +80,80 @@
           this._wait = null;
           reject(new Error(msg));
         };
-        let ws;
-        try {
-          ws = new WebSocket(this.url());
-        } catch (e) {
-          fail('这个浏览器打不开联机');
-          return;
-        }
-        this.ws = ws;
-        const timer = setTimeout(() => {
-          if (this.status === 'open') return;
-          try {
-            ws.close();
-          } catch (e) {}
-          fail('连不上联机服务，先双击目录里的「启动游戏.command」');
-        }, 5000);
 
-        ws.onopen = () => {
-          clearTimeout(timer);
-          settled = true;
-          this.status = 'open';
-          this.error = '';
-          this._wait = null;
-          this.startPing();
-          this.emit('open');
-          resolve();
-        };
-        ws.onmessage = (e) => {
-          let msg;
-          try {
-            msg = JSON.parse(e.data);
-          } catch (err) {
-            return;
-          }
-          this.handle(msg);
-        };
-        ws.onclose = () => {
-          clearTimeout(timer);
-          this.stopPing();
-          const was = this.status;
-          this.room = '';
-          this.players = [];
-          // 掉线了先换一条隧道试试
-          if (PH.Hub && PH.Hub.status === 'online') {
-            setTimeout(() => PH.Hub.failover(PH.Hub.endpoint), 300);
-          }
-          if (!settled) {
-            // 还没连上就断了：多半是服务没开
+        // 一条地址连不上就换下一条：板子优先，云端兜底
+        const attempt = () => {
+          if (settled) return;
+          if (idx >= list.length) {
             fail('连不上联机服务，先双击目录里的「启动游戏.command」');
             return;
           }
-          this.status = 'closed';
-          this._wait = null;
-          if (was === 'open') {
-            this.error = '和联机服务的连接断开了';
-            this.emit('close');
+          const target = list[idx++];
+          let ws;
+          try {
+            ws = new WebSocket(target);
+          } catch (e) {
+            attempt();
+            return;
           }
+          this.ws = ws;
+          let opened = false;
+
+          const timer = setTimeout(() => {
+            if (opened) return;
+            try { ws.close(); } catch (e) {}
+            attempt();
+          }, 4000);
+
+          ws.onopen = () => {
+            opened = true;
+            clearTimeout(timer);
+            settled = true;
+            this.status = 'open';
+            this.error = '';
+            this._wait = null;
+            this.startPing();
+            this.emit('open');
+            resolve();
+          };
+
+          ws.onmessage = (e) => {
+            let msg;
+            try {
+              msg = JSON.parse(e.data);
+            } catch (err) {
+              return;
+            }
+            this.handle(msg);
+          };
+
+          ws.onclose = () => {
+            clearTimeout(timer);
+            this.stopPing();
+            if (!opened && !settled) {
+              attempt();   // 这条地址不通，换下一条
+              return;
+            }
+            const was = this.status;
+            this.room = '';
+            this.players = [];
+            if (PH.Hub && PH.Hub.status === 'online') {
+              setTimeout(() => PH.Hub.failover(PH.Hub.endpoint), 300);
+            }
+            this.status = 'closed';
+            this._wait = null;
+            if (was === 'open') {
+              this.error = '和联机服务的连接断开了';
+              this.emit('close');
+            }
+          };
+
+          ws.onerror = () => {
+            /* onclose 会接着来 */
+          };
         };
-        ws.onerror = () => {
-          /* onclose 会接着来 */
-        };
+
+        attempt();
       });
       return this._wait;
     },

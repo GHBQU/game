@@ -3022,24 +3022,41 @@ const RARITY_NAME = { common: "普通", rare: "稀有", epic: "史诗", evolve: 
 
 /* ==== src/js/20-world.js ==== */
 /* ============================ 6. 联机桥接 ============================ */
+/* 联机地址：板子/局域网的整站用同源 /ws（延迟最低），公网页面回落 Cloudflare。
+   ?ws= 可以强制指定，调试时用。 */
+const NS_CLOUD_CLOUD = "wss://paper-hero.ghbqu.dpdns.org/ws";
 const NS_CLOUD = (function () {
   try {
     const q = new URLSearchParams(location.search).get("ws");
     if (q) return q;
   } catch (e) {}
-  return "wss://paper-hero.ghbqu.dpdns.org/ws";
+  if (location.protocol !== "https:" && location.host) {
+    return "ws://" + location.host + "/ws";
+  }
+  return NS_CLOUD_CLOUD;
 })();
+const NS_CLOUD_FALLBACK = (NS_CLOUD === NS_CLOUD_CLOUD) ? "" : NS_CLOUD_CLOUD;
 
 const NSNet = {
   ws: null, myId: "", room: "", hostId: "", players: [], status: "offline",
   onJoined: null, onPeers: null, onMsg: null, onErr: null, onClose: null, _hb: null,
 
-  connect() {
+  async connect() {
+    if (this.ws && (this.ws.readyState === 0 || this.ws.readyState === 1)) return;
+    try {
+      return await this._connectTo(NS_CLOUD);
+    } catch (e) {
+      if (NS_CLOUD_FALLBACK) return await this._connectTo(NS_CLOUD_FALLBACK);
+      throw e;
+    }
+  },
+
+  _connectTo(url) {
     if (this.ws && (this.ws.readyState === 0 || this.ws.readyState === 1)) return Promise.resolve();
     this.status = "connecting";
     return new Promise((resolve, reject) => {
       let ws;
-      try { ws = new WebSocket(NS_CLOUD); } catch (e) { this.status = "offline"; reject(e); return; }
+      try { ws = new WebSocket(url); } catch (e) { this.status = "offline"; reject(e); return; }
       this.ws = ws;
       let settled = false;
       const timer = setTimeout(() => {

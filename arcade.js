@@ -53,9 +53,21 @@
        http(s)://…  调指定地址的 /api/*
      ESP32 的静态服务在返回 index.html 时会把这里的值改写成 same-origin。 */
   var API_MODE = (function () {
+    /* ?api=http://192.168.1.50 —— 页面放在 Pages 上、后端跑在板子上时用这个。
+       解析一次就记进 localStorage，之后刷新不用再带参数。 */
+    var fromQuery = '';
+    try {
+      fromQuery = String(new URLSearchParams(location.search).get('api') || '').trim();
+    } catch (e) {}
+    if (fromQuery) {
+      if (fromQuery !== 'local' && fromQuery !== 'same-origin' && !/^https?:\/\//i.test(fromQuery)) {
+        fromQuery = 'http://' + fromQuery;
+      }
+      try { localStorage.setItem('arcade.api-mode', fromQuery); } catch (e) {}
+    }
     var m = document.querySelector('meta[name="arcade-api"]');
     var meta = m ? String(m.getAttribute('content') || '').trim() : '';
-    var v = meta;
+    var v = fromQuery || meta;
     if (!v) {
       try { v = localStorage.getItem('arcade.api-mode') || ''; } catch (e) {}
     }
