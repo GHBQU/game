@@ -34,6 +34,55 @@ A 模式既不占 flash，也不用改分区表，联机流量依旧全在局域
 把站点一起塞进 flash，完全离线可玩。前提是文件系统 ≥8MB，需要自己换分区表
 （默认构建只有 2MB）。传文件时加 `--site`。
 
+## 没有公网 IP：板子自己往外连
+
+家里是 CGNAT（光猫 WAN 口写 `100.64.x.x`）时，端口映射做不了，也不能让电脑常开。
+那就让板子主动出站，连到 Cloudflare 上的一台中继：
+
+```
+板子 ──wss 出站──> board.ghbqu.dpdns.org/__relay ──> Durable Object
+手机 ──https/wss──> board.ghbqu.dpdns.org/api, /ws ──> 同一个 DO ──> 板子
+```
+
+一条 TLS 长连接上跑多路复用，握手只做一次（板上一次 ECDHE 要 0.3–1 秒），
+之后每个请求只多几毫秒。
+
+**部署中继**（一次性）：
+
+```bash
+cd server/relay
+npx wrangler@3 deploy
+npx wrangler@3 secret put RELAY_TOKEN     # 自己定一个口令
+```
+
+`wrangler.toml` 里已经写好 `board.ghbqu.dpdns.org` 这个自定义域名，DNS 由 Cloudflare 自动加。
+
+**配置板子**：
+
+```bash
+python3 tools/deploy.py --port /dev/cu.usbmodem14201 \
+    --relay board.ghbqu.dpdns.org --relay-token 你刚设的口令
+```
+
+板子起来后串口会多一行 `内网穿透已启用`，重启断网都会自动重连（1→2→4→8→15→30 秒退避）。
+
+**先在电脑上验证整条链路**，不用等板子：
+
+```bash
+python3 tools/board-sim.py 8891                                    # 板子
+RELAY_HOST=127.0.0.1 RELAY_PORT=9200 RELAY_TLS=0 \
+  RELAY_TOKEN=test python3 tools/board-sim.py 8891                 # 板子 + 隧道
+cd server/relay && npx wrangler@3 dev --local --port 9200 --var RELAY_TOKEN:test
+curl http://127.0.0.1:9200/api/health                              # 经真 Worker 打到板子
+```
+
+实测（本机，含两跳进程）：`/api/health` 往返 12.7 ms，联机 `ping` 中位 2.4 ms，
+A→B 单程 1.07 ms。上真机再加 Cloudflare 边缘那一段，公网 RTT 预计 30–70 ms。
+
+**免费额度**：Workers 10 万请求/天、DO 10 万请求/天、DO duration 13,000 GB-s/天。
+通用写法（`accept()` 常驻）一条连接 24 小时就吃掉 10,800 GB-s，所以 `relay.js` 用的是
+Hibernation（`state.acceptWebSocket`），空闲不计 duration，一天几千次请求只在几 GB-s 量级。
+
 ## 烧录
 
 ```bash
@@ -135,6 +184,7 @@ esp32/
 ├── rooms.py         # 联机房间
 ├── wsproto.py       # WebSocket 握手与帧编解码（手写，无依赖）
 ├── arcade_core.py   # 账号 + 云存档（PC 与板子共用同一份）
+├── tunnel.py        # 内网穿透客户端：出站 wss、多路复用、断线重连
 └── config.py        # 配置，可被板子根目录的 config.json 覆盖
 ```
 
@@ -142,6 +192,7 @@ esp32/
 
 ```bash
 python3 tools/board-sim.py          # http://127.0.0.1:8080
+python3 tools/relay-sim.py          # 中继模拟器，代替 Cloudflare 那一端
 ```
 
 数据在 `tools/.board-data/`，删掉即重置。

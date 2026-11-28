@@ -3036,6 +3036,8 @@ const NS_CLOUD = (function () {
   return NS_CLOUD_CLOUD;
 })();
 const NS_CLOUD_FALLBACK = (NS_CLOUD === NS_CLOUD_CLOUD) ? "" : NS_CLOUD_CLOUD;
+/* 板子经隧道暴露到公网。同源时 NS_CLOUD 已经是 ws://板子/ws，这里只在跨域时补一档 */
+const NS_CLOUD_BOARD = "wss://board.ghbqu.dpdns.org/ws";
 
 const NSNet = {
   ws: null, myId: "", room: "", hostId: "", players: [], status: "offline",
@@ -3043,12 +3045,20 @@ const NSNet = {
 
   async connect() {
     if (this.ws && (this.ws.readyState === 0 || this.ws.readyState === 1)) return;
-    try {
-      return await this._connectTo(NS_CLOUD);
-    } catch (e) {
-      if (NS_CLOUD_FALLBACK) return await this._connectTo(NS_CLOUD_FALLBACK);
-      throw e;
+    /* 三档：同源（板子局域网）→ 板子公网隧道 → Cloudflare。
+       同源那档失败就不再试公网，局域网都连不上，公网基本也没戏，别白等。 */
+    const sameOrigin = (NS_CLOUD === NS_CLOUD_CLOUD) ? "" : NS_CLOUD;
+    if (sameOrigin) return await this._connectTo(sameOrigin);
+    const chain = [NS_CLOUD_BOARD, NS_CLOUD_FALLBACK].filter(Boolean);
+    let last;
+    for (let i = 0; i < chain.length; i++) {
+      try {
+        return await this._connectTo(chain[i]);
+      } catch (e) {
+        last = e;
+      }
     }
+    throw last || new Error("联机服务不可用");
   },
 
   _connectTo(url) {

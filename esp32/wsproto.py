@@ -55,13 +55,13 @@ class WS:
 
     # ---------------- 底层 ----------------
     async def _read(self, n):
-        out = self.buf
-        while len(out) < n:
-            chunk = await self.reader.read(n - len(out))
+        while len(self.buf) < n:
+            chunk = await self.reader.read(n - len(self.buf))
             if not chunk:
                 raise OSError('eof')
-            out += chunk
-        self.buf = b''
+            self.buf += chunk
+        out = self.buf[:n]
+        self.buf = self.buf[n:]
         return out
 
     async def recv(self):

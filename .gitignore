@@ -8,6 +8,11 @@ __pycache__/
 # Wrangler 本地状态，不进仓库
 server/.wrangler/
 server/node_modules/
+server/relay/.wrangler/
+server/relay/node_modules/
+
+# 板子的真实 WiFi 与中继口令，不进仓库
+config.json
 
 # 本机的项目记忆，不进仓库
 .workbuddy/

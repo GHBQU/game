@@ -1,0 +1,21 @@
+name = "arcade-board"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+workers_dev = true
+
+# 新开一个子域，不动 arcade.ghbqu.dpdns.org 上的账号/存档 Worker
+routes = [
+  { pattern = "board.ghbqu.dpdns.org", custom_domain = true }
+]
+
+# 唯一舱位：所有玩家和那块板子都连同一个 Durable Object
+[durable_objects]
+bindings = [{ name = "RELAY", class_name = "Relay" }]
+
+[[migrations]]
+tag = "v1"
+# 免费层只支持 SQLite 后端，这里必须是 new_sqlite_classes
+new_sqlite_classes = ["Relay"]
+
+[observability]
+enabled = true

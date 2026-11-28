@@ -26,6 +26,7 @@
 """
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -33,7 +34,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SITE = os.path.abspath(os.path.join(HERE, '..'))
-SERVER_FILES = ('config.py', 'arcade_core.py', 'wsproto.py', 'rooms.py', 'main.py')
+SERVER_FILES = ('config.py', 'arcade_core.py', 'wsproto.py', 'rooms.py', 'tunnel.py', 'main.py')
 SITE_FILES = ('index.html', 'arcade.js', 'arcade-progress.js', 'holidays.js', 'CNAME')
 SITE_DIRS = ('games',)
 
@@ -79,6 +80,9 @@ def main():
     ap.add_argument('--port', default='')
     ap.add_argument('--site', action='store_true', help='B 模式：整站一起传')
     ap.add_argument('--config', nargs=2, metavar=('SSID', 'PASS'), help='顺手写 config.json')
+    ap.add_argument('--relay', metavar='HOST', help='内网穿透中继域名，例如 board.ghbqu.dpdns.org')
+    ap.add_argument('--relay-token', metavar='TOKEN', help='与中继约定的口令')
+    ap.add_argument('--relay-port', type=int, default=443)
     ap.add_argument('--flash', metavar='FIRMWARE.bin', help='先刷 MicroPython 固件')
     ap.add_argument('--no-server', action='store_true', help='只传站点，不动服务端')
     args = ap.parse_args()
@@ -93,12 +97,33 @@ def main():
         flash(args.flash, port)
         print('刷完记得重新上电')
 
+    cfg_path = os.path.join(SITE, 'config.json')
+    cfg = {}
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+        except Exception:
+            cfg = {}
+    dirty = False
     if args.config:
-        cfg_path = os.path.join(SITE, 'config.json')
+        cfg['wifi_ssid'] = args.config[0]
+        cfg['wifi_pass'] = args.config[1]
+        dirty = True
+    if args.relay:
+        cfg['relay_host'] = args.relay
+        cfg['relay_port'] = args.relay_port
+        cfg['relay_tls'] = True
+        cfg['relay_enabled'] = True
+        if args.relay_token:
+            cfg['relay_token'] = args.relay_token
+        dirty = True
+        print('中继: %s:%d（口令 %s）'
+              % (args.relay, args.relay_port, '已写入' if args.relay_token else '沿用旧的'))
+    if dirty:
         with open(cfg_path, 'w') as f:
-            f.write('{\n  "wifi_ssid": "%s",\n  "wifi_pass": "%s"\n}\n'
-                    % (args.config[0], args.config[1]))
-        print('写好 config.json（记得别提交到仓库）')
+            json.dump(cfg, f, indent=2)
+        print('写好 config.json（这个文件别提交进仓库）')
 
     print('\n[1/3] 传服务端')
     if not args.no_server:

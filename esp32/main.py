@@ -38,6 +38,7 @@ except ImportError:
 import arcade_core
 import wsproto
 import rooms as roommod
+import tunnel
 
 try:
     import config as cfgmod
@@ -462,6 +463,9 @@ async def main():
     if network is not None:
         connect_wifi(CFG)
     asyncio.create_task(rooms.janitor())
+    if CFG.get('relay_enabled') and CFG.get('relay_host'):
+        asyncio.create_task(tunnel.run(CFG, PORT))
+        print('内网穿透已启用: %s' % CFG.get('relay_host'))
     await asyncio.start_server(serve_conn, '0.0.0.0', PORT, backlog=8)
     print('监听 %d 端口（静态 + /api + /ws）' % PORT)
     while True:

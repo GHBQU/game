@@ -57,6 +57,12 @@
       const out = [];
       const local = PH.Hub && PH.Hub.localWs ? PH.Hub.localWs() : '';
       if (local) out.push(local);
+      /* 板子经隧道暴露在公网上的地址。已经在板子局域网里（local 有值）就不试了：
+         局域网都连不上，公网那条大概率也没意义，别白等 4 秒 */
+      if (!local) {
+        const board = 'wss://board.ghbqu.dpdns.org/ws';
+        if (out.indexOf(board) < 0) out.push(board);
+      }
       const cloud = PH.Hub && PH.Hub.wsUrl ? PH.Hub.wsUrl(false) : this.url();
       if (cloud && out.indexOf(cloud) < 0) out.push(cloud);
       if (!out.length) out.push(this.url());
